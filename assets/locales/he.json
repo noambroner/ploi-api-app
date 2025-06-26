@@ -1,0 +1,22 @@
+{
+  "app_title": "מנהל שרתי Ploi",
+  "dashboard": "לוח הבקרה",
+  "connection_details": "חיבור",
+  "servers": "שרתים",
+  "welcome_title": "ברוכים הבאים למנהל שרתי Ploi",
+  "welcome_subtitle": "נהלו את השרתים שלכם בקלות עם Ploi API",
+  "api_token": "טוקן API",
+  "api_token_hint": "הזינו את טוקן ה-API של Ploi כדי להתחבר",
+  "api_url": "כתובת API: https://ploi.io/api",
+  "connect": "התחבר",
+  "connecting": "מתחבר...",
+  "connection_success": "התחברות הצליחה ל-Ploi API!",
+  "connection_failed": "ההתחברות נכשלה. אנא בדקו את טוקן ה-API שלכם.",
+  "servers_list": "השרתים שלכם",
+  "loading_servers": "טוען שרתים...",
+  "no_servers": "לא נמצאו שרתים",
+  "server_ip": "כתובת IP",
+  "server_status": "סטטוס",
+  "retry": "נסה שוב",
+  "error": "שגיאה"
+} 

@@ -1,0 +1,112 @@
+[2025-06-25T18:44:51.228185] ERROR: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: null, database: null, install_monitoring: true}
+--------------------------
+[2025-06-25T18:44:51.235185] ERROR: Error creating server: Exception: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: null, database: null, install_monitoring: true}
+--------------------------
+[2025-06-25T19:52:56.173030] ERROR: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: 8.4, database: mysql, install_monitoring: true}
+--------------------------
+[2025-06-25T19:52:56.179026] ERROR: Error creating server: Exception: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: 8.4, database: mysql, install_monitoring: true}
+--------------------------
+[2025-06-25T20:10:53.046920] ERROR: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: null, database: null, install_monitoring: true}
+--------------------------
+[2025-06-25T20:10:53.060928] ERROR: Error creating server: Exception: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: null, database: null, install_monitoring: true}
+--------------------------
+[2025-06-25T20:21:52.311655] ERROR: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: 8.4, database: mysql, install_monitoring: true}
+--------------------------
+[2025-06-25T20:21:52.338648] ERROR: Error creating server: Exception: Failed to create server: 302 - <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="refresh" content="0;url='https://ploi.io'" />
+
+        <title>Redirecting to https://ploi.io</title>
+    </head>
+    <body>
+        Redirecting to <a href="https://ploi.io">https://ploi.io</a>.
+    </body>
+</html>
+PARAMS: {name: test1-app, provider: null, region: tlv, plan: vc2-1c-1gb, os: ubuntu-24-04-lts, type: server, ip_version: ipv4, webserver: nginx, php_version: 8.4, database: mysql, install_monitoring: true}
+--------------------------

@@ -1,0 +1,22 @@
+{
+  "app_title": "Ploi Server Manager",
+  "dashboard": "Dashboard",
+  "connection_details": "Connection",
+  "servers": "Servers",
+  "welcome_title": "Welcome to Ploi Server Manager",
+  "welcome_subtitle": "Manage your servers easily with Ploi API",
+  "api_token": "API Token",
+  "api_token_hint": "Enter your Ploi API token to connect",
+  "api_url": "API URL: https://ploi.io/api",
+  "connect": "Connect",
+  "connecting": "Connecting...",
+  "connection_success": "Successfully connected to Ploi API!",
+  "connection_failed": "Failed to connect. Please check your API token.",
+  "servers_list": "Your Servers",
+  "loading_servers": "Loading servers...",
+  "no_servers": "No servers found",
+  "server_ip": "IP",
+  "server_status": "Status",
+  "retry": "Retry",
+  "error": "Error"
+} 
