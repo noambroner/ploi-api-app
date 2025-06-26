@@ -27,13 +27,65 @@ PROMPT: "ציטוט מדויק של ה-PROMPT של המשתמש"
 4. **מחק ידנית** תיקיות build, .dart_tool, build/web
 5. **תעד כל ניסיון** - גם אם נכשל
 
+### 🔄 תהליך Git ו-Repository (חובה בתחילת כל עבודה!)
+
+**בתחילת כל יום עבודה:**
+1. **מעבר לתיקיית הפרוייקט:**
+   ```powershell
+   cd Projects/ploi_api_app
+   ```
+
+2. **בדיקת סטטוס Git:**
+   ```powershell
+   git status
+   ```
+
+3. **משיכת עדכונים מ-GitHub:**
+   ```powershell
+   git pull origin master
+   ```
+
+4. **בדיקת שינויים ניתן למיזוג:**
+   ```powershell
+   git log --oneline -5
+   ```
+
+**בסוף כל יום עבודה או אחרי פיצ'ר מוכן:**
+1. **הוספת קבצים לGit:**
+   ```powershell
+   git add .
+   ```
+
+2. **בדיקת מה יועלה:**
+   ```powershell
+   git status
+   ```
+
+3. **Commit עם הודעה ברורה:**
+   ```powershell
+   git commit -m "תיאור ברור של השינוי בעברית ו-English"
+   ```
+
+4. **העלאה ל-GitHub:**
+   ```powershell
+   git push origin master
+   ```
+
+**הוראות Git חשובות:**
+- **לא לעשות commit** אם יש שגיאות או קוד לא עובד
+- **תמיד לבדוק** `flutter analyze` לפני commit
+- **הודעות commit** צריכות להיות ברורות ומתארות מה השתנה
+- **Push יומי** - בסוף כל יום עבודה
+- **Repository URL:** https://github.com/noambroner/ploi-api-app
+
 ### 🎯 תהליך עבודה מסודר
 1. **קרא את הקובץ הזה** (README_INSTRUCTIONS.md)
 2. **בדוק תאריך/שעה** לפני כל פעולה
-3. **ודא עבודה בתיקייה הנכונה** - תמיד עבוד מתוך Projects/ploi_api_app
-4. **עבוד תמיד מתוך** Projects/ploi_api_app
+3. **בצע Git pull** לעדכון מהרפוזיטורי
+4. **ודא עבודה בתיקייה הנכונה** - תמיד עבוד מתוך Projects/ploi_api_app
 5. **תעד כל שלב** מיידית
 6. **בדוק תוצאות** לפני המשך
+7. **Commit ו-Push** בסוף העבודה
 
 ### 📋 הוראות פיתוח
 - **שפת עבודה עיקרית:** עברית (אלא אם המשתמש מבקש אחרת)
@@ -62,8 +114,8 @@ cd Projects/ploi_api_app && flutter doctor  # ❌ לא עובד
 ```
 
 ### 📦 Versioning
-- The current version of the project is: **1.03**
-- Every change, even the smallest, increments the number after the dot by 1 (e.g., 1.04, 1.05, ...)
+- The current version of the project is: **1.11**
+- Every change, even the smallest, increments the number after the dot by 1 (e.g., 1.12, 1.13, ...)
 - **IMPORTANT:** The assistant must update the version number in this file, in the AppBar, and in all relevant logs after every change—no exceptions!
 
 ---
