@@ -471,7 +471,7 @@ class _MainDashboardState extends State<MainDashboard> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Ploi API Dashboard v1.2.10'),
+          title: Text('Ploi API Dashboard v1.2.11'),
           actions: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -2073,6 +2073,7 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: _buildSiteCard(
+            site,
             _getSiteDomain(site),
             _getSiteRepository(site),
             _formatSiteSize(site),
@@ -2082,62 +2083,444 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
     );
   }
   
-  Widget _buildSiteCard(String domain, String repository, String size) {
+  Widget _buildSiteCard(Map<String, dynamic> site, String domain, String repository, String size) {
     return Card(
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: const BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SiteManagementPage(
+                site: site,
+                serverData: widget.server,
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      domain,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      repository,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      size,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton(
+                icon: const Icon(Icons.more_vert),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'edit', child: Text('ערוך')),
+                  const PopupMenuItem(value: 'delete', child: Text('מחק')),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Site Management Page
+class SiteManagementPage extends StatefulWidget {
+  final Map<String, dynamic> site;
+  final Map<String, dynamic> serverData;
+
+  const SiteManagementPage({
+    super.key,
+    required this.site,
+    required this.serverData,
+  });
+
+  @override
+  State<SiteManagementPage> createState() => _SiteManagementPageState();
+}
+
+class _SiteManagementPageState extends State<SiteManagementPage> {
+  String selectedSection = 'general';
+  
+  String _getSiteDomain(Map<String, dynamic> site) {
+    return site['root_domain'] ?? site['domain'] ?? 'Unknown Site';
+  }
+  
+  String _getSiteRepository(Map<String, dynamic> site) {
+    final repo = site['repository'] ?? site['git_repository'];
+    if (repo == null || repo.toString().isEmpty) {
+      return 'No Repository';
+    }
+    return repo.toString();
+  }
+  
+  String _getSiteSize(Map<String, dynamic> site) {
+    final size = site['size'] ?? site['disk_usage'];
+    if (size == null) return 'Size unknown';
+    return size.toString();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final siteDomain = _getSiteDomain(widget.site);
+    
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('ניהול אתר - $siteDomain'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          backgroundColor: const Color(0xFF2C3E50),
+          foregroundColor: Colors.white,
+        ),
+        body: Row(
+          children: [
+            // Sidebar Navigation
+            Container(
+              width: 250,
+              color: const Color(0xFFF8F9FA),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    domain,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  // Site Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    color: const Color(0xFF1ABC9C),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            siteDomain,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    repository,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    size,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
+                  
+                  // Navigation Menu
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _buildSidebarItem('general', 'כללי', Icons.dashboard),
+                        _buildSidebarItem('ssl', 'SSL', Icons.security),
+                        _buildSidebarItem('cronjobs', 'Cronjobs', Icons.schedule),
+                        _buildSidebarItem('notifications', 'התראות', Icons.notifications),
+                        _buildSidebarItem('monitor', 'ניטור', Icons.monitor),
+                        _buildSidebarItem('redirects', 'הפניות', Icons.open_in_new),
+                        _buildSidebarItem('manage', 'ניהול', Icons.settings),
+                        _buildSidebarItem('logs', 'לוגים', Icons.list_alt),
+                        _buildSidebarItem('settings', 'הגדרות', Icons.tune),
+                        _buildSidebarItem('view', 'תצוגה', Icons.visibility),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            PopupMenuButton(
-              icon: const Icon(Icons.more_vert),
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'edit', child: Text('ערוך')),
-                const PopupMenuItem(value: 'delete', child: Text('מחק')),
-              ],
+            
+            // Main Content Area
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _buildMainContent(),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+  
+  Widget _buildSidebarItem(String key, String title, IconData icon) {
+    final isSelected = selectedSection == key;
+    
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isSelected ? const Color(0xFF1ABC9C) : Colors.grey[600],
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isSelected ? const Color(0xFF1ABC9C) : Colors.grey[800],
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      selectedTileColor: const Color(0xFF1ABC9C).withValues(alpha: 0.1),
+      onTap: () {
+        setState(() {
+          selectedSection = key;
+        });
+      },
+    );
+  }
+  
+  Widget _buildMainContent() {
+    switch (selectedSection) {
+      case 'general':
+        return _buildGeneralSection();
+      case 'ssl':
+        return _buildSSLSection();
+      case 'cronjobs':
+        return _buildCronjobsSection();
+      case 'notifications':
+        return _buildNotificationsSection();
+      case 'monitor':
+        return _buildMonitorSection();
+      case 'redirects':
+        return _buildRedirectsSection();
+      case 'manage':
+        return _buildManageSection();
+      case 'logs':
+        return _buildLogsSection();
+      case 'settings':
+        return _buildSettingsSection();
+      case 'view':
+        return _buildViewSection();
+      default:
+        return _buildGeneralSection();
+    }
+  }
+  
+  Widget _buildGeneralSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'כללי',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Installation Options
+        Row(
+          children: [
+            Expanded(
+              child: _buildInstallationCard(
+                'Git',
+                'התקן מרפוזיטורי',
+                Icons.code,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildInstallationCard(
+                'WordPress',
+                'התקן WordPress',
+                Icons.web,
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildInstallationCard(
+                'Nextcloud',
+                'התקן Nextcloud',
+                Icons.cloud,
+                Colors.blue[600]!,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildInstallationCard(
+                'Custom',
+                'התקנה מותאמת',
+                Icons.build,
+                Colors.grey[600]!,
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 32),
+        
+        // Site Information
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'פרטי אתר',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildInfoRow('דומיין:', _getSiteDomain(widget.site)),
+                _buildInfoRow('רפוזיטורי:', _getSiteRepository(widget.site)),
+                _buildInfoRow('גודל:', _getSiteSize(widget.site)),
+                _buildInfoRow('נוצר:', widget.site['created_at'] ?? 'N/A'),
+                _buildInfoRow('עודכן:', widget.site['updated_at'] ?? 'N/A'),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildInstallationCard(String title, String subtitle, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: () {
+          // TODO: Implement installation functionality
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 48,
+                color: color,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Placeholder sections for other functionality
+  Widget _buildSSLSection() {
+    return const Center(child: Text('SSL Management - בפיתוח'));
+  }
+  
+  Widget _buildCronjobsSection() {
+    return const Center(child: Text('Cronjobs Management - בפיתוח'));
+  }
+  
+  Widget _buildNotificationsSection() {
+    return const Center(child: Text('Notifications Management - בפיתוח'));
+  }
+  
+  Widget _buildMonitorSection() {
+    return const Center(child: Text('Site Monitoring - בפיתוח'));
+  }
+  
+  Widget _buildRedirectsSection() {
+    return const Center(child: Text('Redirects Management - בפיתוח'));
+  }
+  
+  Widget _buildManageSection() {
+    return const Center(child: Text('Site Management - בפיתוח'));
+  }
+  
+  Widget _buildLogsSection() {
+    return const Center(child: Text('Site Logs - בפיתוח'));
+  }
+  
+  Widget _buildSettingsSection() {
+    return const Center(child: Text('Site Settings - בפיתוח'));
+  }
+  
+  Widget _buildViewSection() {
+    return const Center(child: Text('Site View - בפיתוח'));
   }
 }
