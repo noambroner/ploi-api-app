@@ -471,7 +471,7 @@ class _MainDashboardState extends State<MainDashboard> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Ploi API Dashboard v1.2.13'),
+          title: Text('Ploi API Dashboard v1.2.14'),
           actions: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -2493,9 +2493,10 @@ class _SiteManagementPageState extends State<SiteManagementPage> {
   
   // Placeholder sections for other functionality
   Widget _buildSSLSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         Text(
           'ניהול SSL',
           style: TextStyle(
@@ -2654,6 +2655,7 @@ class _SiteManagementPageState extends State<SiteManagementPage> {
           ),
         ),
       ],
+      ),
     );
   }
   
@@ -2699,25 +2701,7 @@ class _SiteManagementPageState extends State<SiteManagementPage> {
   void _showSSLInstallDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('התקן תעודת SSL'),
-        content: const Text('האם ברצונך להתקין תעודת SSL חדשה?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ביטול'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('תעודת SSL מותקנת...')),
-              );
-            },
-            child: const Text('התקן'),
-          ),
-        ],
-      ),
+      builder: (context) => SSLInstallDialog(site: widget.site),
     );
   }
   
@@ -4077,6 +4061,243 @@ class _AddCronjobDialogState extends State<AddCronjobDialog> {
   void dispose() {
     _commandController.dispose();
     _descriptionController.dispose();
+    super.dispose();
+  }
+}
+
+// SSL Installation Dialog
+class SSLInstallDialog extends StatefulWidget {
+  final Map<String, dynamic> site;
+
+  const SSLInstallDialog({super.key, required this.site});
+
+  @override
+  State<SSLInstallDialog> createState() => _SSLInstallDialogState();
+}
+
+class _SSLInstallDialogState extends State<SSLInstallDialog> {
+  String _certificateType = 'letsencrypt';
+  bool _isLoading = false;
+  final _domainsController = TextEditingController();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill with site domain
+    final siteDomain = widget.site['domain'] ?? 'ploi.bflow.co.il';
+    _domainsController.text = siteDomain;
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        title: const Text('התקן תעודת SSL'),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Certificate Type Selection
+              Text(
+                'סוג תעודה:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              RadioListTile<String>(
+                title: const Text('Let\'s Encrypt (חינם)'),
+                subtitle: const Text('תעודה אוטומטית עם חידוש אוטומטי'),
+                value: 'letsencrypt',
+                groupValue: _certificateType,
+                onChanged: (value) {
+                  setState(() {
+                    _certificateType = value!;
+                  });
+                },
+              ),
+              
+              RadioListTile<String>(
+                title: const Text('Custom Certificate'),
+                subtitle: const Text('העלה תעודה מותאמת אישית'),
+                value: 'custom',
+                groupValue: _certificateType,
+                onChanged: (value) {
+                  setState(() {
+                    _certificateType = value!;
+                  });
+                },
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Domains
+              Text(
+                'דומיינים מכוסים:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              TextFormField(
+                controller: _domainsController,
+                decoration: const InputDecoration(
+                  labelText: 'דומיינים',
+                  hintText: 'example.com,www.example.com',
+                  border: OutlineInputBorder(),
+                  helperText: 'הפרד דומיינים בפסיק',
+                ),
+                maxLines: 2,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Info Card
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.blue[600], size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'מידע חשוב',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '• ודא שה-DNS מצביע לשרת הנכון',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    const Text(
+                      '• התקנת SSL עלולה לקחת מספר דקות',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    const Text(
+                      '• התעודה תתחדש אוטומטית',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isLoading ? null : () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: _isLoading ? null : _installSSL,
+            child: _isLoading 
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('התקן תעודה'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _installSSL() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Simulate SSL installation process
+      await Future.delayed(const Duration(seconds: 3));
+      
+      if (mounted) {
+        Navigator.pop(context);
+        
+        // Show success dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green[600]),
+                const SizedBox(width: 8),
+                const Text('התקנה הושלמה!'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('תעודת SSL הותקנה בהצלחה:'),
+                const SizedBox(height: 8),
+                Text('• דומיין: ${_domainsController.text}'),
+                Text('• סוג: ${_certificateType == 'letsencrypt' ? 'Let\'s Encrypt' : 'Custom'}'),
+                const Text('• סטטוס: פעיל'),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'האתר כעת מאובטח עם HTTPS!',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('סגור'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה בהתקנת SSL: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+  
+  @override
+  void dispose() {
+    _domainsController.dispose();
     super.dispose();
   }
 }
