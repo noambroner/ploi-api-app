@@ -114,7 +114,7 @@ cd Projects/ploi_api_app && flutter doctor  # ❌ לא עובד
 ```
 
 ### 📦 Versioning & Version Management Rules
-- The current version of the project is: **1.2.9**
+- The current version of the project is: **1.2.10**
 - **CRITICAL RULE:** Every code change MUST update the version number according to semantic versioning:
   - **Bug fixes** = patch version (x.x.X) - e.g., 1.2.0 → 1.2.1
   - **New features** = minor version (x.X.x) - e.g., 1.2.1 → 1.3.0
@@ -479,9 +479,16 @@ Now includes automatic fixing of all flutter analyze issues before build and run
 
 ---
 
-## Current Version: v1.2.9
+## Current Version: v1.2.10
 
 ### Recent Updates
+
+**v1.2.10 (June 27, 2025)**
+- **Fixed**: Git repository issues with desktop.ini files
+- **Added**: desktop.ini files to .gitignore to prevent future conflicts
+- **Updated**: Version consistency across all project files
+- **Improved**: Repository synchronization with GitHub
+- **Added**: All missing development logs from June 26, 2025
 
 **v1.2.9 (June 26, 2025)**
 - **Added**: Site creation functionality with domain input field

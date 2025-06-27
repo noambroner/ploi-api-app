@@ -471,7 +471,7 @@ class _MainDashboardState extends State<MainDashboard> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Ploi API Dashboard v1.2.0'),
+          title: Text('Ploi API Dashboard v1.2.10'),
           actions: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1889,7 +1889,6 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
     final serverName = widget.server['name'] ?? 'Unknown Server';
     
     return Directionality(
