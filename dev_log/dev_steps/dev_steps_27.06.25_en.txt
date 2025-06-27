@@ -177,4 +177,60 @@ git push origin master  # ✅ Worked on first try!
 
 🎯 Next Step: SSL Certificate management testing with Let's Encrypt
 
-=== SESSION SUCCESSFULLY COMPLETED === 
+=== SESSION SUCCESSFULLY COMPLETED ===
+
+=== Bilingual Documentation Rules Update ===
+
+[2025-06-27 12:30:00 UTC]
+PROMPT: "Fix the guidelines so there won't be a situation where one file doesn't get updated. Update the step files in this step too (as part of the permanent guidelines) so we'll be ready for the next session."
+
+🚨 New Golden Rule - Mandatory Bilingual Documentation:
+**Every time one step file is updated - MUST update the other one too!**
+
+📋 Mandatory Documentation Process:
+1. **Update Detection**: When dev_steps_DD.MM.YY_he.txt is updated
+2. **Parallel Update**: Immediately update dev_steps_DD.MM.YY_en.txt
+3. **Same Content**: Same information in both languages
+4. **Verification**: Ensure both files are updated
+5. **Git**: Save both files together in commit
+
+🔄 Corrected Workflow:
+```
+1. Update Hebrew file ✅
+2. Immediately - Update English file ✅  
+3. Check both files are updated ✅
+4. Git add . ✅
+5. Git commit ✅
+6. Git push ✅
+```
+
+⚠️ Critical Warnings:
+- NEVER finish a task if only one file is updated
+- NEVER do Git commit with only one file
+- MUST verify both files contain the same information
+
+📝 README_INSTRUCTIONS.md Update:
+- Added mandatory bilingual documentation rules
+- Updated current project status
+- Defined tasks for next session
+
+🎯 Next Session Preparation:
+**SSL Certificate Management Testing with Let's Encrypt**
+
+📍 Code Location: lib/main.dart - SSL Management section (lines ~2800-3000)
+
+🔍 What to Test:
+1. SSL Management functionality
+2. Ploi API integration for SSL certificates
+3. Let's Encrypt process
+4. SSL management user interface
+5. Error and success messages
+
+✅ Current Status Ready for Next Session:
+- App runs successfully
+- Clean code (0 errors)
+- Git synchronized
+- Complete documentation in both languages
+- Updated documentation rules
+
+=== END OF RULES UPDATE === 
