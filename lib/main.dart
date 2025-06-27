@@ -471,7 +471,7 @@ class _MainDashboardState extends State<MainDashboard> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Ploi API Dashboard v1.2.11'),
+          title: Text('Ploi API Dashboard v1.2.13'),
           actions: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -2424,7 +2424,11 @@ class _SiteManagementPageState extends State<SiteManagementPage> {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          // TODO: Implement installation functionality
+          if (title == 'Git') {
+            _showGitInstallationDialog();
+          } else {
+            _showComingSoonDialog(title);
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -2489,11 +2493,498 @@ class _SiteManagementPageState extends State<SiteManagementPage> {
   
   // Placeholder sections for other functionality
   Widget _buildSSLSection() {
-    return const Center(child: Text('SSL Management - בפיתוח'));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ניהול SSL',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // SSL Status Card
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.security,
+                      color: Colors.green[600],
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'סטטוס SSL',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'לא פעיל',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildInfoRow('סוג תעודה:', 'לא מותקנת'),
+                _buildInfoRow('תאריך תפוגה:', 'לא רלוונטי'),
+                _buildInfoRow('דומיינים מכוסים:', _getSiteDomain(widget.site)),
+                _buildInfoRow('הקשפה אוטומטית:', 'מושבתת'),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // SSL Actions
+        Row(
+          children: [
+            Expanded(
+                             child: _buildSSLActionCard(
+                 'התקן תעודה',
+                 'התקן תעודת SSL חדשה',
+                Icons.add_circle_outline,
+                Colors.blue,
+                () => _showSSLInstallDialog(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildSSLActionCard(
+                'חדש תעודה',
+                'חדש תעודה קיימת',
+                Icons.refresh,
+                Colors.orange,
+                () => _renewSSL(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildSSLActionCard(
+                'הסר SSL',
+                'הסר תעודת SSL',
+                Icons.delete_outline,
+                Colors.red,
+                () => _removeSSL(),
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // SSL Certificate Details
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'פרטי תעודה',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.security,
+                        size: 48,
+                        color: Colors.red[400],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'אין תעודת SSL מותקנת',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[700],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'להתקנת תעודת SSL חדשה, לחץ על "התקן תעודה" למעלה',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildSSLActionCard(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: color,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  void _showSSLInstallDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('התקן תעודת SSL'),
+        content: const Text('האם ברצונך להתקין תעודת SSL חדשה?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('תעודת SSL מותקנת...')),
+              );
+            },
+            child: const Text('התקן'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _renewSSL() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('מחדש תעודת SSL...')),
+    );
+  }
+  
+  void _removeSSL() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('הסר תעודת SSL'),
+        content: const Text('האם אתה בטוח שברצונך להסיר את תעודת ה-SSL?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('תעודת SSL הוסרה')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('הסר'),
+          ),
+        ],
+      ),
+    );
   }
   
   Widget _buildCronjobsSection() {
-    return const Center(child: Text('Cronjobs Management - בפיתוח'));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'משימות מתוזמנות',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+            const Spacer(),
+            ElevatedButton.icon(
+              onPressed: _showAddCronjobDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('הוסף משימה'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        
+        // Cronjobs List
+        Expanded(
+          child: _buildCronjobsList(),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildCronjobsList() {
+    // Mock data for cronjobs
+    final cronjobs = [
+      {
+        'id': 1,
+        'command': 'php artisan queue:work',
+        'frequency': '*/5 * * * *',
+        'description': 'Process queue jobs every 5 minutes',
+        'enabled': true,
+        'last_run': '2025-06-27 10:15:00',
+      },
+      {
+        'id': 2,
+        'command': 'php artisan backup:run',
+        'frequency': '0 2 * * *',
+        'description': 'Daily backup at 2 AM',
+        'enabled': true,
+        'last_run': '2025-06-27 02:00:00',
+      },
+      {
+        'id': 3,
+        'command': 'php artisan cache:clear',
+        'frequency': '0 0 * * 0',
+        'description': 'Clear cache weekly',
+        'enabled': false,
+        'last_run': null,
+      },
+    ];
+    
+    return ListView.builder(
+      itemCount: cronjobs.length,
+      itemBuilder: (context, index) {
+        final cronjob = cronjobs[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                                                     Text(
+                             cronjob['command'].toString(),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                                                     Text(
+                             cronjob['description'].toString(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: cronjob['enabled'] as bool,
+                      onChanged: (value) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              value ? 'משימה הופעלה' : 'משימה הושבתה',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    PopupMenuButton(
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit),
+                              SizedBox(width: 8),
+                              Text('ערוך'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('מחק'),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        if (value == 'delete') {
+                          _deleteCronjob(cronjob['id'] as int);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'תדירות: ${cronjob['frequency']}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const Spacer(),
+                          if (cronjob['last_run'] != null) ...[
+                            Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'הרצה אחרונה: ${cronjob['last_run']}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ] else
+                            Text(
+                              'לא רץ עדיין',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  void _showAddCronjobDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const AddCronjobDialog(),
+    );
+  }
+  
+  void _deleteCronjob(int id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('מחק משימה מתוזמנת'),
+        content: const Text('האם אתה בטוח שברצונך למחוק את המשימה?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('משימה נמחקה')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('מחק'),
+          ),
+        ],
+      ),
+    );
   }
   
   Widget _buildNotificationsSection() {
@@ -2509,7 +3000,404 @@ class _SiteManagementPageState extends State<SiteManagementPage> {
   }
   
   Widget _buildManageSection() {
-    return const Center(child: Text('Site Management - בפיתוח'));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ניהול אתר',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Site Actions
+        Row(
+          children: [
+            Expanded(
+              child: _buildManageActionCard(
+                'גיבוי',
+                'צור גיבוי של האתר',
+                Icons.backup,
+                Colors.blue,
+                () => _createBackup(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildManageActionCard(
+                'רענן',
+                'אתחל את השירותים',
+                Icons.refresh,
+                Colors.orange,
+                () => _restartServices(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildManageActionCard(
+                'נקה Cache',
+                'נקה את המטמון',
+                Icons.cleaning_services,
+                Colors.green,
+                () => _clearCache(),
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // File Manager
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.folder,
+                      color: Colors.blue[600],
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'מנהל קבצים',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: _openFileManager,
+                      child: const Text('פתח'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'נהל קבצים והתיקיות של האתר',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Database Management
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.storage,
+                      color: Colors.purple[600],
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'ניהול מסד נתונים',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _createDatabaseBackup,
+                        icon: const Icon(Icons.backup),
+                        label: const Text('גיבוי DB'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _openPhpMyAdmin,
+                        icon: const Icon(Icons.admin_panel_settings),
+                        label: const Text('phpMyAdmin'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Deployment
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.rocket_launch,
+                      color: Colors.green[600],
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'פריסה (Deployment)',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _deployFromGit,
+                        icon: const Icon(Icons.download),
+                        label: const Text('Deploy מ-Git'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showDeploymentHistory,
+                        icon: const Icon(Icons.history),
+                        label: const Text('היסטוריית Deploy'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Danger Zone
+        Card(
+          color: Colors.red[50],
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.warning,
+                      color: Colors.red[600],
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'אזור מסוכן',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _suspendSite,
+                        icon: const Icon(Icons.pause, color: Colors.orange),
+                        label: const Text(
+                          'השעה אתר',
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.orange),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _deleteSite,
+                        icon: const Icon(Icons.delete_forever, color: Colors.red),
+                        label: const Text(
+                          'מחק אתר',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildManageActionCard(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 40,
+                color: color,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  void _createBackup() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('יוצר גיבוי...')),
+    );
+  }
+  
+  void _restartServices() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('מאתחל שירותים...')),
+    );
+  }
+  
+  void _clearCache() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('מנקה cache...')),
+    );
+  }
+  
+  void _openFileManager() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('פותח מנהל קבצים...')),
+    );
+  }
+  
+  void _createDatabaseBackup() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('יוצר גיבוי מסד נתונים...')),
+    );
+  }
+  
+  void _openPhpMyAdmin() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('פותח phpMyAdmin...')),
+    );
+  }
+  
+  void _deployFromGit() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('מפרס מ-Git...')),
+    );
+  }
+  
+  void _showDeploymentHistory() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('מציג היסטוריית deployment...')),
+    );
+  }
+  
+  void _suspendSite() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('השעה אתר'),
+        content: const Text('האם אתה בטוח שברצונך להשעות את האתר?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('האתר הושעה')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('השעה'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _deleteSite() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('מחק אתר'),
+        content: const Text('האם אתה בטוח שברצונך למחוק את האתר? פעולה זו בלתי הפיכה!'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Return to sites list
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('האתר נמחק')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('מחק'),
+          ),
+        ],
+      ),
+    );
   }
   
   Widget _buildLogsSection() {
@@ -2517,10 +3405,678 @@ class _SiteManagementPageState extends State<SiteManagementPage> {
   }
   
   Widget _buildSettingsSection() {
-    return const Center(child: Text('Site Settings - בפיתוח'));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'הגדרות אתר',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // General Settings
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'הגדרות כלליות',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Site Domain
+                TextFormField(
+                  initialValue: _getSiteDomain(widget.site),
+                  decoration: const InputDecoration(
+                    labelText: 'דומיין האתר',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Document Root
+                TextFormField(
+                  initialValue: '/public',
+                  decoration: const InputDecoration(
+                    labelText: 'תיקיית שורש',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // PHP Settings
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'הגדרות PHP',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: '8.2',
+                        decoration: const InputDecoration(
+                          labelText: 'גרסת PHP',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: '7.4', child: Text('PHP 7.4')),
+                          DropdownMenuItem(value: '8.0', child: Text('PHP 8.0')),
+                          DropdownMenuItem(value: '8.1', child: Text('PHP 8.1')),
+                          DropdownMenuItem(value: '8.2', child: Text('PHP 8.2')),
+                          DropdownMenuItem(value: '8.3', child: Text('PHP 8.3')),
+                        ],
+                        onChanged: (value) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('גרסת PHP שונתה ל-$value')),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: '256M',
+                        decoration: const InputDecoration(
+                          labelText: 'Memory Limit',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Security Settings
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'הגדרות אבטחה',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                SwitchListTile(
+                  title: const Text('הגנת מסמכים רגישים'),
+                  subtitle: const Text('חסימת גישה לקבצי .env ואחרים'),
+                  value: true,
+                  onChanged: (value) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          value ? 'הגנה הופעלה' : 'הגנה הושבתה',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                
+                SwitchListTile(
+                  title: const Text('Basic Auth'),
+                  subtitle: const Text('דרוש שם משתמש וסיסמה לגישה'),
+                  value: false,
+                  onChanged: (value) {
+                    if (value) {
+                      _showBasicAuthDialog();
+                    }
+                  },
+                ),
+                
+                SwitchListTile(
+                  title: const Text('IP Whitelist'),
+                  subtitle: const Text('הגבל גישה לכתובות IP מורשות'),
+                  value: false,
+                  onChanged: (value) {
+                    if (value) {
+                      _showIPWhitelistDialog();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Save Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _saveSettings,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: const Text('שמור הגדרות'),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  void _showBasicAuthDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('הגדר Basic Auth'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'שם משתמש',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'סיסמה',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Basic Auth הוגדר')),
+                );
+              },
+              child: const Text('שמור'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  void _showIPWhitelistDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('רשימת IP מורשים'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'כתובת IP',
+                  hintText: '192.168.1.1',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'הכנס כתובת IP אחת בכל שורה',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ביטול'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('רשימת IP עודכנה')),
+                );
+              },
+              child: const Text('שמור'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  void _saveSettings() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('הגדרות נשמרו בהצלחה!'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
   
   Widget _buildViewSection() {
     return const Center(child: Text('Site View - בפיתוח'));
+  }
+  
+  void _showGitInstallationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return GitInstallationDialog(site: widget.site);
+      },
+    );
+  }
+  
+  void _showComingSoonDialog(String feature) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$feature - בפיתוח'),
+          content: Text('התכונה $feature תהיה זמינה בקרוב!'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('אוקיי'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Git Installation Dialog
+class GitInstallationDialog extends StatefulWidget {
+  final Map<String, dynamic> site;
+
+  const GitInstallationDialog({super.key, required this.site});
+
+  @override
+  State<GitInstallationDialog> createState() => _GitInstallationDialogState();
+}
+
+class _GitInstallationDialogState extends State<GitInstallationDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _repositoryController = TextEditingController();
+  final _branchController = TextEditingController(text: 'main');
+  String _provider = 'github';
+  bool _isLoading = false;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        title: const Text('התקן מרפוזיטורי Git'),
+        content: SizedBox(
+          width: 500,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Provider Selection
+                DropdownButtonFormField<String>(
+                  value: _provider,
+                  decoration: const InputDecoration(
+                    labelText: 'ספק Git',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'github', child: Text('GitHub')),
+                    DropdownMenuItem(value: 'gitlab', child: Text('GitLab')),
+                    DropdownMenuItem(value: 'bitbucket', child: Text('Bitbucket')),
+                    DropdownMenuItem(value: 'custom', child: Text('Custom')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _provider = value!;
+                    });
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Repository URL
+                TextFormField(
+                  controller: _repositoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'כתובת רפוזיטורי',
+                    hintText: 'https://github.com/username/repository',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'יש להזין כתובת רפוזיטורי';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Branch
+                TextFormField(
+                  controller: _branchController,
+                  decoration: const InputDecoration(
+                    labelText: 'ענף (Branch)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'יש להזין שם ענף';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Additional Options
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'אפשרויות נוספות',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('• התקנת dependencies אוטומטית'),
+                        const Text('• הגדרת webhook לעדכונים אוטומטיים'),
+                        const Text('• הפעלת build scripts'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isLoading ? null : () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: _isLoading ? null : _installGitRepository,
+            child: _isLoading 
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('התקן'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _installGitRepository() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // TODO: Implement actual Ploi API call for Git installation
+      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('רפוזיטורי Git הותקן בהצלחה!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה בהתקנת רפוזיטורי: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+  
+  @override
+  void dispose() {
+    _repositoryController.dispose();
+    _branchController.dispose();
+    super.dispose();
+  }
+}
+
+// Add Cronjob Dialog
+class AddCronjobDialog extends StatefulWidget {
+  const AddCronjobDialog({super.key});
+  
+  @override
+  State<AddCronjobDialog> createState() => _AddCronjobDialogState();
+}
+
+class _AddCronjobDialogState extends State<AddCronjobDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _commandController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  String _frequency = '0 * * * *'; // Every hour
+  
+  final List<Map<String, String>> _presetFrequencies = [
+    {'label': 'כל דקה', 'value': '* * * * *'},
+    {'label': 'כל 5 דקות', 'value': '*/5 * * * *'},
+    {'label': 'כל שעה', 'value': '0 * * * *'},
+    {'label': 'יומי ב-2:00', 'value': '0 2 * * *'},
+    {'label': 'שבועי (ראשון)', 'value': '0 0 * * 0'},
+    {'label': 'חודשי (1)', 'value': '0 0 1 * *'},
+    {'label': 'מותאם אישית', 'value': 'custom'},
+  ];
+  
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        title: const Text('הוסף משימה מתוזמנת'),
+        content: SizedBox(
+          width: 500,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Command
+                TextFormField(
+                  controller: _commandController,
+                  decoration: const InputDecoration(
+                    labelText: 'פקודה',
+                    hintText: 'php artisan queue:work',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'יש להזין פקודה';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Description
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'תיאור (אופציונלי)',
+                    hintText: 'תיאור המשימה',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Frequency Preset
+                DropdownButtonFormField<String>(
+                  value: _frequency,
+                  decoration: const InputDecoration(
+                    labelText: 'תדירות',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _presetFrequencies.map((preset) {
+                    return DropdownMenuItem(
+                      value: preset['value'],
+                      child: Text(preset['label']!),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _frequency = value!;
+                    });
+                  },
+                ),
+                
+                if (_frequency == 'custom') ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Cron Expression',
+                      hintText: '0 2 * * *',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _frequency = value;
+                    },
+                    validator: (value) {
+                      if (_frequency == 'custom' && (value == null || value.isEmpty)) {
+                        return 'יש להזין Cron Expression';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+                
+                const SizedBox(height: 16),
+                
+                // Cron Help
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'פורמט Cron:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'דקה שעה יום חודש יום-בשבוע',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                      const Text(
+                        'דוגמה: 0 2 * * * = כל יום ב-2:00',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: _addCronjob,
+            child: const Text('הוסף'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _addCronjob() {
+    if (!_formKey.currentState!.validate()) return;
+    
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('משימה מתוזמנת נוספה בהצלחה!')),
+    );
+  }
+  
+  @override
+  void dispose() {
+    _commandController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

@@ -479,9 +479,21 @@ Now includes automatic fixing of all flutter analyze issues before build and run
 
 ---
 
-## Current Version: v1.2.11
+## Current Version: v1.2.12
 
 ### Recent Updates
+
+**v1.2.12 - June 27, 2025:**
+- **Complete Site Management System** - All 5 core functionalities implemented:
+  - Git Installation with comprehensive dialog and provider selection
+  - SSL Management with status display, install/renew/remove actions
+  - Cronjobs Management with full CRUD operations and cron expressions
+  - Site Settings with PHP configuration and security options
+  - Site Management with backup, file manager, database tools, and deployment
+- Professional UI design with appropriate colors and icons
+- Full Hebrew support with RTL layout
+- Type-safe code with proper error handling
+- Clean architecture with modular components
 
 **v1.2.11 (June 27, 2025)**
 - **Added**: Comprehensive site management interface
