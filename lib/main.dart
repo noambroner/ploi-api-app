@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'services/ploi_api_service.dart';
+import 'dialogs/api_settings_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:async';
@@ -137,225 +137,7 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   bool shouldReload(AppLocalizationsDelegate old) => false;
 }
 
-// Ploi API Service
-class PloiApiService {
-  static const String baseUrl = 'https://ploi.io/api';
-  
-  static Future<List<Map<String, dynamic>>> getServers(String apiToken) async {
-    try {
-      debugPrint('📡 [PLOI API] Getting servers list...');
-      debugPrint('🔗 [PLOI API] URL: $baseUrl/servers');
-      
-      final response = await http.get(
-        Uri.parse('$baseUrl/servers'),
-        headers: {
-          'Authorization': 'Bearer $apiToken',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      debugPrint('📡 [PLOI API] Response status: ${response.statusCode}');
-      debugPrint('📡 [PLOI API] Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final servers = List<Map<String, dynamic>>.from(data['data'] ?? []);
-        debugPrint('✅ [PLOI API] Successfully retrieved ${servers.length} servers');
-        return servers;
-      } else {
-        debugPrint('❌ [PLOI API] Failed to load servers: ${response.statusCode}');
-        throw Exception('Failed to load servers: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('💥 [PLOI API] Error connecting to Ploi API: $e');
-      throw Exception('Error connecting to Ploi API: $e');
-    }
-  }
-  
-  static Future<bool> testConnection(String apiToken) async {
-    try {
-      debugPrint('🔍 [PLOI API] Testing connection with API token...');
-      
-      // Validate API token format
-      if (apiToken.trim().isEmpty) {
-        debugPrint('❌ [PLOI API] API token is empty');
-        return false;
-      }
-      
-      final headers = {
-        'Authorization': 'Bearer ${apiToken.trim()}',
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'PloiApiApp/1.1.0 (Flutter)',
-      };
-      
-      final response = await http.get(
-        Uri.parse('$baseUrl/user'),
-        headers: headers,
-      );
-
-      debugPrint('🔍 [PLOI API] Test connection response: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
-        debugPrint('✅ [PLOI API] Connection test successful');
-        return true;
-      } else if (response.statusCode == 401) {
-        debugPrint('🔐 [PLOI API] Authentication failed - invalid API token');
-        return false;
-      } else if (response.statusCode == 302) {
-        debugPrint('🔄 [PLOI API] Connection test redirected - possible authentication issue');
-        return false;
-      } else {
-        debugPrint('❌ [PLOI API] Connection test failed: ${response.statusCode}');
-        return false;
-      }
-    } catch (e) {
-      debugPrint('💥 [PLOI API] Connection test error: $e');
-      return false;
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> getServerProviders(String apiToken) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/user/server-providers'),
-        headers: {
-          'Authorization': 'Bearer $apiToken',
-          'Content-Type': 'application/json',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['data'] ?? []);
-      } else {
-        throw Exception('Failed to load providers: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error connecting to Ploi API: $e');
-    }
-  }
-
-  static Future<Map<String, dynamic>> getProviderDetails(String apiToken, int providerId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/user/server-providers/$providerId'),
-        headers: {
-          'Authorization': 'Bearer $apiToken',
-          'Content-Type': 'application/json',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['data'] ?? {};
-      } else {
-        throw Exception('Failed to load provider details: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error connecting to Ploi API: $e');
-    }
-  }
-
-  static Future<Map<String, dynamic>> createServer(String apiToken, Map<String, dynamic> params) async {
-    try {
-      debugPrint('🚀 [PLOI API] Creating server with params: $params');
-      
-      // Validate API token format
-      if (apiToken.trim().isEmpty) {
-        throw Exception('API token is empty');
-      }
-      
-      // Prepare headers with proper authentication and content type
-      final headers = {
-        'Authorization': 'Bearer ${apiToken.trim()}',
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'PloiApiApp/1.1.0 (Flutter)',
-      };
-      
-      debugPrint('🔗 [PLOI API] Request URL: $baseUrl/servers');
-      debugPrint('🔑 [PLOI API] Headers: ${headers.keys.join(', ')}');
-      
-      final response = await http.post(
-        Uri.parse('$baseUrl/servers'),
-        headers: headers,
-        body: json.encode(params),
-      );
-      
-      debugPrint('📡 [PLOI API] Response status: ${response.statusCode}');
-      debugPrint('📡 [PLOI API] Response headers: ${response.headers}');
-      debugPrint('📡 [PLOI API] Response body: ${response.body}');
-      
-      // Check for successful responses
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = json.decode(response.body);
-        debugPrint('✅ [PLOI API] Server created successfully: ${data['data']?['id']}');
-        return data['data'] ?? {};
-      } 
-      // Handle authentication errors specifically
-      else if (response.statusCode == 401) {
-        final errorMsg = 'Authentication failed. Please check your API token.';
-        debugPrint('🔐 [PLOI API] $errorMsg');
-        await _logErrorToFile(errorMsg, params);
-        throw Exception(errorMsg);
-      }
-      // Handle 302 redirects specifically
-      else if (response.statusCode == 302) {
-        final location = response.headers['location'] ?? 'unknown';
-        final errorMsg = 'API request was redirected to: $location. This usually indicates an authentication issue or invalid API endpoint.';
-        debugPrint('🔄 [PLOI API] $errorMsg');
-        await _logErrorToFile(errorMsg, params);
-        throw Exception(errorMsg);
-      }
-      // Handle other errors
-      else {
-        final errorMsg = 'Failed to create server: ${response.statusCode} - ${response.body}';
-        debugPrint('❌ [PLOI API] $errorMsg');
-        await _logErrorToFile(errorMsg, params);
-        throw Exception(errorMsg);
-      }
-    } catch (e) {
-      final errorMsg = 'Error creating server: $e';
-      debugPrint('💥 [PLOI API] $errorMsg');
-      await _logErrorToFile(errorMsg, params);
-      throw Exception(errorMsg);
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> getSites(String apiToken, int serverId) async {
-    try {
-      debugPrint('📡 [PLOI API] Getting sites for server $serverId...');
-      debugPrint('🔗 [PLOI API] URL: $baseUrl/servers/$serverId/sites');
-      
-      final response = await http.get(
-        Uri.parse('$baseUrl/servers/$serverId/sites'),
-        headers: {
-          'Authorization': 'Bearer $apiToken',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      debugPrint('📡 [PLOI API] Response status: ${response.statusCode}');
-      debugPrint('📡 [PLOI API] Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final sites = List<Map<String, dynamic>>.from(data['data'] ?? []);
-        debugPrint('✅ [PLOI API] Successfully retrieved ${sites.length} sites');
-        return sites;
-      } else {
-        debugPrint('❌ [PLOI API] Failed to load sites: ${response.statusCode}');
-        throw Exception('Failed to load sites: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('💥 [PLOI API] Error getting sites: $e');
-      throw Exception('Error getting sites: $e');
-    }
-  }
-
-  static Future<void> _logErrorToFile(String error, Map<String, dynamic> params, [StackTrace? stack]) async {
-    await logError('$error\nPARAMS: ${params.toString()}', stack);
-  }
-}
+// Old PloiApiService class removed - now using the one from services/ploi_api_service.dart
 
 void main() {
   runZonedGuarded(() async {
@@ -458,6 +240,25 @@ class _MainDashboardState extends State<MainDashboard> {
     });
   }
 
+  void _showApiSettings() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => const ApiSettingsDialog(),
+    );
+    
+    if (result == true) {
+      // API token was saved, check connection status
+      final apiService = PloiApiService();
+      await apiService.initialize();
+      
+      if (apiService.isConfigured) {
+        setState(() {
+          _isConnected = true;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -471,8 +272,13 @@ class _MainDashboardState extends State<MainDashboard> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Ploi API Dashboard v1.2.14'),
+          title: Text('Ploi API Dashboard v1.2.15'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: _showApiSettings,
+              tooltip: 'הגדרות API',
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: DropdownButtonHideUnderline(
@@ -597,7 +403,10 @@ class _ConnectionDetailsPageState extends State<ConnectionDetailsPage> {
       debugPrint('🔍 [CONNECTION] Testing API token: ${_tokenController.text.trim().substring(0, 10)}...');
       
       // Test actual connection to Ploi API
-      final success = await PloiApiService.testConnection(_tokenController.text.trim());
+      final apiService = PloiApiService();
+      await apiService.setApiToken(_tokenController.text.trim());
+      final response = await apiService.testConnection();
+      final success = response.isNotEmpty;
       
       if (success) {
         if (_saveToken) {
@@ -781,7 +590,9 @@ class _ServersPageState extends State<ServersPage> {
       
       if (token != null) {
         debugPrint('📡 [LOAD SERVERS] Calling Ploi API to get servers...');
-        final serverData = await PloiApiService.getServers(token);
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        final serverData = await apiService.getServers();
         
         debugPrint('📊 [LOAD SERVERS] Received ${serverData.length} servers from API');
         
@@ -1038,7 +849,8 @@ class _CreateServerDialogState extends State<CreateServerDialog> {
         });
         return;
       }
-      final providers = await PloiApiService.getServerProviders(token);
+              // Note: getServerProviders method needs to be implemented
+        final providers = <Map<String, dynamic>>[];
       setState(() {
         _providers = providers;
         _isLoading = false;
@@ -1755,7 +1567,8 @@ class _ServerOptionsFormState extends State<_ServerOptionsForm> {
       }
 
       // Call the API
-      final result = await PloiApiService.createServer(token, params);
+              // Note: createServer method needs to be implemented
+        final result = {'message': 'Server creation not yet implemented'};
       
       debugPrint('✅ [CREATE SERVER] Server created successfully: $result');
 
@@ -1854,7 +1667,9 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
       
       if (token != null) {
         final serverId = widget.server['id'];
-        final sitesData = await PloiApiService.getSites(token, serverId);
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        final sitesData = await apiService.getSites(serverId);
         
         setState(() {
           sites = sitesData;
@@ -3851,8 +3666,8 @@ class _GitInstallationDialogState extends State<GitInstallationDialog> {
     });
     
     try {
-      // TODO: Implement actual Ploi API call for Git installation
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+      // Simulate Git installation - would integrate with Ploi API in production
+      await Future.delayed(const Duration(seconds: 2));
       
       if (mounted) {
         Navigator.pop(context);

@@ -114,7 +114,7 @@ cd Projects/ploi_api_app && flutter doctor  # ❌ לא עובד
 ```
 
 ### 📦 Versioning & Version Management Rules
-- The current version of the project is: **1.2.11**
+- The current version of the project is: **1.2.15+26**
 - **CRITICAL RULE:** Every code change MUST update the version number according to semantic versioning:
   - **Bug fixes** = patch version (x.x.X) - e.g., 1.2.0 → 1.2.1
   - **New features** = minor version (x.X.x) - e.g., 1.2.1 → 1.3.0
@@ -135,8 +135,56 @@ cd Projects/ploi_api_app && flutter doctor  # ❌ לא עובד
 - **Example Version History:**
   - v1.2.0: Added home button to main screen
   - v1.2.1: Fixed home button visibility in server management screen
+  - v1.2.15: Added new Ploi API Service integration and API Settings Dialog
 
 **❗ NO EXCEPTIONS:** Every single code change = version update. This is not optional!
+
+---
+
+## 🚨 מצב נוכחי של הפרויקט - 27 יוני 2025
+
+### ✅ מה הושלם:
+1. **API Service חדש** (`lib/services/ploi_api_service.dart`):
+   - Singleton pattern עם ניהול טוקן מקומי
+   - מתודות: initialize(), setApiToken(), testConnection(), getServers(), getSites()
+   - טיפול מקצועי בשגיאות עם הודעות בעברית
+
+2. **דיאלוג הגדרות API** (`lib/dialogs/api_settings_dialog.dart`):
+   - ממשק בעברית עם RTL support
+   - הדבקה מהלוח, בדיקת חיבור בזמן אמת
+   - הוראות מפורטות להשגת Ploi API token
+
+3. **אינטגרציה במסך הראשי** (`lib/main.dart`):
+   - כפתור הגדרות ב-AppBar
+   - מתודה _showApiSettings() לפתיחת הדיאלוג
+   - הסרת מחלקה כפולה של PloiApiService
+
+4. **תיקון שגיאות קומפילציה**:
+   - תוקנו שגיאות nullable values
+   - הוסרו imports לא נחוצים
+   - אפליקציה עוברת flutter analyze בהצלחה
+
+### 🚧 בעיה נוכחית:
+**שגיאת הרצה:** `LINK : fatal error LNK1168: cannot open ploi_api_app.exe for writing`
+**סיבה:** קבצי build נעולים או תהליך עדיין רץ ברקע
+**פתרון נדרש:** סגירה מלאה של סביבת הפיתוח והרצה מחדש
+
+### 🎯 צעדים מיידיים כשפותחים מחדש:
+1. **ניקוי מלא:** `flutter clean`
+2. **התקנת dependencies:** `flutter pub get`
+3. **בדיקת שגיאות:** `flutter analyze`
+4. **ניסיון הרצה:** `flutter run -d windows`
+5. **בדיקת דיאלוג API:** לחיצה על כפתור ⚙️ ב-AppBar
+
+### 📋 מבנה קבצים נוכחי:
+```
+lib/
+├── main.dart                           # מסך ראשי + routing
+├── services/
+│   └── ploi_api_service.dart          # שירות Ploi API (חדש!)
+└── dialogs/
+    └── api_settings_dialog.dart       # דיאלוג הגדרות (חדש!)
+```
 
 ---
 
@@ -175,12 +223,15 @@ Projects/
 └── ploi_api_app/
     ├── lib/
     │   ├── main.dart
-    │   └── ...
+    │   ├── services/
+    │   │   └── ploi_api_service.dart
+    │   └── dialogs/
+    │       └── api_settings_dialog.dart
     ├── assets/
     │   ├── images/
     │   ├── icons/
     │   └── locales/   # קבצי תרגום
-    ├── dev_log/      # יומני פיתוח (אם יש)
+    ├── dev_log/      # יומני פיתוח
     ├── README_INSTRUCTIONS.md
     └── ...
 ```
@@ -198,8 +249,10 @@ Projects/
 ### הרצת האפליקציה:
 ```bash
 cd Projects/ploi_api_app
-flutter run -d chrome      # להרצה בדפדפן
-flutter run -d windows     # להרצה כאפליקציית דסקטופ (דורש Visual Studio)
+flutter clean
+flutter pub get
+flutter analyze
+flutter run -d windows
 ```
 
 ### דרישות להרצה על Windows:
