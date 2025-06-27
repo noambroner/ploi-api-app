@@ -78,4 +78,48 @@ ORIGINAL USER PROMPT:
 - Git issues need to be resolved
 - Many documentation files not added to Git
 
-Status: Ready to receive additional instructions from user 
+Status: Ready to receive additional instructions from user
+
+----------------------------------------
+📋 New Task: Adding Site Management Interface
+----------------------------------------
+🕒 Date & Time: June 27, 2025, Friday, 09:40
+
+PROMPT: "Okay, as we said, now when clicking on a specific site - should display all options just like in PLOI"
+
+🎯 Goal:
+Create detailed site management screen with all Ploi options:
+- General (main)
+- SSL (SSL settings)
+- Cronjobs (scheduled tasks)
+- Notifications (alerts)
+- Monitor (monitoring)
+- Redirects (redirections)
+- Manage (management)
+- Logs (logs)
+- Settings (configuration)
+- View (preview)
+
+📱 Based on screenshots:
+- Ploi displays sidebar menu with all options
+- Each option leads to specific management page
+- Installation options: Git, WordPress, Nextcloud, Custom deployments
+- Provider options: GitHub, GitLab, Bitbucket, Custom
+
+✅ COMPLETED:
+1. Updated version from v1.2.10 to v1.2.11
+2. Added InkWell to site cards to make them clickable
+3. Created new SiteManagementPage class with:
+   - Sidebar navigation with all options (General, SSL, Cronjobs, Notifications, Monitor, Redirects, Manage, Logs, Settings, View)
+   - General page with installation cards: Git, WordPress, Nextcloud, Custom
+   - Site information display
+   - Structure similar to original Ploi interface
+4. Fixed type errors and deprecated methods
+5. Fixed helper functions placement in class
+6. Application passes flutter analyze without errors
+
+🎯 Result:
+Now when clicking on a site - opens detailed site management screen with sidebar navigation and management options just like in Ploi!
+
+📝 Documentation updated in both Hebrew and English
+🔄 Changes committed and pushed to GitHub successfully 
