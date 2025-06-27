@@ -12,6 +12,12 @@
 .swiftpm/
 migrate_working_dir/
 
+# Windows system files
+desktop.ini
+Desktop.ini
+Thumbs.db
+ehthumbs.db
+
 # IntelliJ related
 *.iml
 *.ipr

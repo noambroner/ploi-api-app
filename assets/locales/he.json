@@ -17,6 +17,7 @@
   "no_servers": "לא נמצאו שרתים",
   "server_ip": "כתובת IP",
   "server_status": "סטטוס",
+  "server_management": "ניהול שרת",
   "retry": "נסה שוב",
   "error": "שגיאה"
 } 

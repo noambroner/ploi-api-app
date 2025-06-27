@@ -2,7 +2,7 @@
 
 A Flutter application for managing servers via the Ploi API.
 
-## Version: 1.06
+## Version: 1.2.0
 
 ### Features
 - Multi-language support (Hebrew/English)

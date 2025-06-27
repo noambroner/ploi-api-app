@@ -1,0 +1,50 @@
+שלב פיתוח - גרסה 1.2.8 (26.06.25 - חלק 9)
+==============================================
+
+תיקון שגיאת Type Casting בטעינת אתרים
+----------------------------------
+
+שגיאה שזוהתה:
+- כשמנסים להציג אתרים לשרת שיש לו אתרים פעילים מקבלים שגיאה:
+  "type '_Map<String, dynamic>' is not a subtype of type 'int' in type cast"
+- השגיאה הייתה בשורה: `final serverId = widget.server['id'] as int;`
+- ה-server ID יכול להגיע כ-String במקום int מה-API
+
+תיקונים שיושמו:
+
+1. תיקון Type Casting בטוח יותר ל-Server ID:
+   ```dart
+   // Handle both string and int server IDs
+   final serverIdValue = widget.server['id'];
+   final serverId = serverIdValue is int ? serverIdValue : int.parse(serverIdValue.toString());
+   ```
+
+2. שיפור פונקציית _formatSiteSize():
+   - Type casting בטוח יותר עם int.tryParse()
+   - הוספת try-catch לטיפול בשגיאות
+   - בדיקת שדות גודל נוספים (size)
+   - תמיכה בהצגת גודל בבתים (B)
+
+3. הוספת פונקציות עזר לנתוני אתר:
+   - _getSiteDomain(): מטפלת בשדות domain/name
+   - _getSiteRepository(): מטפלת בשדות repository/git_repository/repo
+   - Type casting בטוח עם toString()
+
+4. הוספת Debug Logging:
+   - הדפסת מבנה נתוני האתרים מה-API
+   - עזרה לזיהוי שדות נתונים זמינים
+   - מוגבל ל-2 אתרים ראשונים למנוע ספאם
+
+שיפורים נוספים:
+- טיפול גמיש יותר בנתוני אתרים מה-API
+- הגנה מפני null values ושגיאות type casting
+- הודעות שגיאה ברורות יותר
+- תמיכה בפורמטים שונים של נתוני שרת
+
+עדכון גרסה:
+- AppBar: v1.2.7 → v1.2.8
+- pubspec.yaml: 1.2.7+19 → 1.2.8+20
+
+תוצאה:
+כעת האפליקציה אמורה לטעון אתרים בהצלחה ללא שגיאות type casting, 
+גם עבור שרתים עם אתרים פעילים. 

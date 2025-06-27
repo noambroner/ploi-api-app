@@ -17,6 +17,7 @@
   "no_servers": "No servers found",
   "server_ip": "IP",
   "server_status": "Status",
+  "server_management": "Server Management",
   "retry": "Retry",
   "error": "Error"
 } 

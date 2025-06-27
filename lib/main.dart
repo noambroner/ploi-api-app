@@ -321,6 +321,37 @@ class PloiApiService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getSites(String apiToken, int serverId) async {
+    try {
+      debugPrint('📡 [PLOI API] Getting sites for server $serverId...');
+      debugPrint('🔗 [PLOI API] URL: $baseUrl/servers/$serverId/sites');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/servers/$serverId/sites'),
+        headers: {
+          'Authorization': 'Bearer $apiToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('📡 [PLOI API] Response status: ${response.statusCode}');
+      debugPrint('📡 [PLOI API] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final sites = List<Map<String, dynamic>>.from(data['data'] ?? []);
+        debugPrint('✅ [PLOI API] Successfully retrieved ${sites.length} sites');
+        return sites;
+      } else {
+        debugPrint('❌ [PLOI API] Failed to load sites: ${response.statusCode}');
+        throw Exception('Failed to load sites: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('💥 [PLOI API] Error getting sites: $e');
+      throw Exception('Error getting sites: $e');
+    }
+  }
+
   static Future<void> _logErrorToFile(String error, Map<String, dynamic> params, [StackTrace? stack]) async {
     await logError('$error\nPARAMS: ${params.toString()}', stack);
   }
@@ -440,7 +471,7 @@ class _MainDashboardState extends State<MainDashboard> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Ploi API Dashboard v1.1.0'),
+          title: Text('Ploi API Dashboard v1.2.0'),
           actions: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -920,10 +951,12 @@ class _ServersPageState extends State<ServersPage> {
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios),
                       onTap: () {
-                        // TODO: Navigate to server details
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Server ${server['name']} clicked'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ServerManagementPage(
+                              server: server,
+                            ),
                           ),
                         );
                       },
@@ -1781,6 +1814,330 @@ class _ServerOptionsFormState extends State<_ServerOptionsForm> {
         content: Text(message),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+}
+
+class ServerManagementPage extends StatefulWidget {
+  final Map<String, dynamic> server;
+
+  const ServerManagementPage({
+    super.key,
+    required this.server,
+  });
+
+  @override
+  State<ServerManagementPage> createState() => _ServerManagementPageState();
+}
+
+class _ServerManagementPageState extends State<ServerManagementPage> {
+  bool isLoadingSites = false;
+  List<Map<String, dynamic>> sites = [];
+  String? sitesError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSites();
+  }
+
+  Future<void> _loadSites() async {
+    setState(() {
+      isLoadingSites = true;
+      sitesError = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final serverId = widget.server['id'];
+        final sitesData = await PloiApiService.getSites(token, serverId);
+        
+        setState(() {
+          sites = sitesData;
+          isLoadingSites = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        sitesError = e.toString();
+        isLoadingSites = false;
+      });
+    }
+  }
+
+  String _getSiteDomain(Map<String, dynamic> site) {
+    return site['root_domain'] ?? site['domain'] ?? 'Unknown Domain';
+  }
+
+  String _getSiteRepository(Map<String, dynamic> site) {
+    final repo = site['repository'] ?? site['git_repository'];
+    if (repo == null || repo.toString().isEmpty) {
+      return 'No Repository';
+    }
+    return repo.toString();
+  }
+
+  String _formatSiteSize(Map<String, dynamic> site) {
+    final size = site['size'] ?? site['disk_usage'];
+    if (size == null) return 'Size unknown';
+    return size.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final serverName = widget.server['name'] ?? 'Unknown Server';
+    
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('ניהול שרת - $serverName'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          backgroundColor: const Color(0xFF2C3E50),
+          foregroundColor: Colors.white,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Server info header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1ABC9C),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            serverName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'IP: ${widget.server['ip'] ?? 'N/A'}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${sites.length} אתרים',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Sites section
+              Row(
+                children: [
+                  Text(
+                    'אתרים',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _loadSites,
+                    tooltip: 'רענן',
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Sites list
+              Expanded(
+                child: _buildSitesList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSitesList() {
+    if (isLoadingSites) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    
+    if (sitesError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'שגיאה',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              sitesError!,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadSites,
+              child: const Text('נסה שוב'),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    if (sites.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.language_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'לא נמצאו אתרים',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return ListView.builder(
+      itemCount: sites.length,
+      itemBuilder: (context, index) {
+        final site = sites[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildSiteCard(
+            _getSiteDomain(site),
+            _getSiteRepository(site),
+            _formatSiteSize(site),
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildSiteCard(String domain, String repository, String size) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    domain,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    repository,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    size,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton(
+              icon: const Icon(Icons.more_vert),
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'edit', child: Text('ערוך')),
+                const PopupMenuItem(value: 'delete', child: Text('מחק')),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

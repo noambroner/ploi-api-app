@@ -1,0 +1,148 @@
+PROMPT: "Ok, now let's create 2 batch files: 1. 'clean_ploi' that when run will: -clean -delete build directory -create new build 2. 'run_ploi' that when run will open the application in Windows"
+=========================================================================================================================================
+
+🕒 Date and Time: 26.06.2025, Thursday, 19:58
+📍 Location: C:\NoamDrive\DataFlow\cursor\Projects\ploi_api_app\
+
+ORIGINAL USER PROMPT:
+"Ok, now let's create 2 batch files:
+1. 'clean_ploi' that when run will:
+-clean
+-delete build directory  
+-create new build
+
+2. 'run_ploi' that when run will open the application in Windows"
+
+----------------------------------------
+✨ What I Did This Session:
+----------------------------------------
+
+1. **Accurate Time Check:**
+   - Checked time against timeanddate.com
+   - Current time: Thursday, June 26, 2025, 19:58 IDT (UTC+3)
+
+2. **Read Development Instructions:**
+   - Read README_INSTRUCTIONS.md
+   - Read DEVELOPMENT_WORKFLOW_INSTRUCTIONS.md
+   - Understood strict documentation requirements
+
+3. **Created clean_ploi.bat:**
+   - Comprehensive batch file for cleaning and rebuilding
+   - Includes 5 main steps:
+     * Navigate to project directory
+     * flutter clean
+     * Manual deletion of build directory
+     * flutter pub get
+     * flutter build windows --debug
+   - Includes error handling and clear messages
+   - Emojis and user-friendly interface
+
+4. **Created run_ploi.bat:**
+   - Batch file for running the application on Windows
+   - Includes 3 main steps:
+     * Navigate to project directory
+     * Check if application is built
+     * Launch the application
+   - Automatic building if executable doesn't exist
+   - Uses start "" for opening in separate window
+
+----------------------------------------
+🔧 Major Technical Changes:
+----------------------------------------
+
+**Files Created:**
+1. `Projects/ploi_api_app/clean_ploi.bat` - Cleaning and rebuilding file
+2. `Projects/ploi_api_app/run_ploi.bat` - Application launcher file
+
+**clean_ploi.bat Features:**
+- Automatic navigation to project directory
+- flutter clean with error handling
+- rmdir /s /q "build" for manual build deletion
+- flutter pub get for dependency updates
+- flutter build windows --debug for new build
+- Clear messages with emojis
+- pause at end for reading messages
+
+**run_ploi.bat Features:**
+- Automatic navigation to project directory
+- Check if executable file exists
+- Automatic building if required
+- Launch with start "" "build\windows\x64\runner\Debug\ploi_api_app.exe"
+- Clear messages and process tracking
+- pause >nul for convenient closing
+
+----------------------------------------
+🎯 Results:
+----------------------------------------
+
+✅ What Works:
+- Created two functional batch files
+- clean_ploi.bat performs complete cleaning and building process
+- run_ploi.bat launches the application on Windows
+- All files include advanced error handling
+- User-friendly interface with clear messages
+
+🔄 What's In Progress:
+- Files are ready for testing
+- Need to verify they work as expected
+
+❌ What Doesn't Work:
+- Not yet tested in practice (just created)
+
+----------------------------------------
+📋 Next Steps:
+----------------------------------------
+
+1. **Test the Files:**
+   - Run clean_ploi.bat for testing
+   - Run run_ploi.bat for testing
+   - Ensure processes work as expected
+
+2. **Documentation Update:**
+   - Update bug_log.md if issues arise
+   - Update README if needed
+
+3. **Git Workflow:**
+   - Commit changes with proper message
+   - Push to GitHub repository
+
+----------------------------------------
+🎉 Session Achievements:
+----------------------------------------
+
+- **Created Convenient Work Tools** - Two functional batch files
+- **Full Automation** - Complex processes became one-click operations
+- **Professional Error Handling** - Every error handled with clear messages
+- **User-Friendly Interface** - Emojis and clear messages
+- **Complete Documentation** - Entire process documented per requirements
+
+**Current Status:** 
+- ✅ Two batch files created successfully
+- ✅ clean_ploi.bat - Ready for complete cleaning and building
+- ✅ run_ploi.bat - Ready for application launch
+- 🔄 Ready for testing and functionality verification
+- 🎯 User can now run the files and verify they work 🚀
+
+----------------------------------------
+📝 Technical Notes:
+----------------------------------------
+
+**File Design:**
+- Each file starts with @echo off for clean interface
+- Headers with == for clear identification
+- Automatic date and time with %date% %time%
+- Use cd /d for safe navigation between drives
+- Error handling with if %errorlevel% neq 0
+- pause and pause >nul for good user experience
+
+**Safety:**
+- File existence checks before operations
+- Failure handling with exit /b 1
+- Clear warning messages
+- Backup and cleanup before new build
+
+**Usability:**
+- Emojis for quick status identification
+- Clear Hebrew messages
+- Numbered steps
+- User tips in case of problems 

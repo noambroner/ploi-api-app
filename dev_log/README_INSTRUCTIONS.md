@@ -113,10 +113,30 @@ flutter pub get
 cd Projects/ploi_api_app && flutter doctor  # ❌ לא עובד
 ```
 
-### 📦 Versioning
-- The current version of the project is: **1.11**
-- Every change, even the smallest, increments the number after the dot by 1 (e.g., 1.12, 1.13, ...)
-- **IMPORTANT:** The assistant must update the version number in this file, in the AppBar, and in all relevant logs after every change—no exceptions!
+### 📦 Versioning & Version Management Rules
+- The current version of the project is: **1.2.9**
+- **CRITICAL RULE:** Every code change MUST update the version number according to semantic versioning:
+  - **Bug fixes** = patch version (x.x.X) - e.g., 1.2.0 → 1.2.1
+  - **New features** = minor version (x.X.x) - e.g., 1.2.1 → 1.3.0
+  - **Breaking changes** = major version (X.x.x) - e.g., 1.3.0 → 2.0.0
+
+- **MANDATORY UPDATES:** After every change, update:
+  1. **AppBar title** in main.dart: `'Ploi API Dashboard vX.X.X'`
+  2. **pubspec.yaml** version field: `version: X.X.X+buildNumber`
+  3. **This README file** current version number
+  4. **All development logs** with the new version
+
+- **Version Tracking Purpose:**
+  - Ensures the correct code is loaded when running the app
+  - Allows tracking which features/fixes are in each build
+  - Prevents confusion about which version is running
+  - Essential for debugging and user support
+
+- **Example Version History:**
+  - v1.2.0: Added home button to main screen
+  - v1.2.1: Fixed home button visibility in server management screen
+
+**❗ NO EXCEPTIONS:** Every single code change = version update. This is not optional!
 
 ---
 
@@ -456,5 +476,84 @@ Never use `&&` to chain commands in PowerShell! Run each command separately.
 
 ### 🚀 Full Run ("הרצה מלאה")
 Now includes automatic fixing of all flutter analyze issues before build and run.
+
+---
+
+## Current Version: v1.2.9
+
+### Recent Updates
+
+**v1.2.9 (June 26, 2025)**
+- **Added**: Site creation functionality with domain input field
+- **Added**: Advanced settings toggle for site creation
+- **Added**: Support for all Ploi API site creation parameters
+- **Added**: Project type selection (30+ frameworks supported)
+- **Added**: Default values when advanced settings are not used
+- **Added**: Comprehensive translations (English/Hebrew)
+- **Added**: Real-time site list update after creation
+- **Improved**: User experience with loading indicators and success messages
+
+**v1.2.8 (June 26, 2025)**
+- **Fixed**: Type casting error when loading sites for servers with active sites
+- **Fixed**: Robust handling of server ID (string/int) from API
+- **Improved**: Safe type casting for site data (domain, repository, size)
+- **Added**: Debug logging for site data structure
+- **Enhanced**: Error handling for site data parsing
+
+**v1.2.7 (June 26, 2025)**
+- **Fixed**: Sites now display correctly per selected server
+- **Added**: Real-time site loading from Ploi API per server
+- **Added**: Loading states and error handling for sites
+- **Added**: Refresh button for sites
+- **Added**: Proper empty state when server has no sites
+- **Improved**: User experience with proper loading indicators
+
+**v1.2.6 (June 26, 2025)**
+- **Fixed**: Server creation validation errors now keep popup open
+- **Improved**: User experience - validation errors don't close dialog
+- **Fixed**: Server name validation with proper regex pattern
+
+**v1.2.5 (June 26, 2025)**
+- **Fixed**: Server creation with proper server name validation
+- **Fixed**: Always send required php_version and database_type fields
+- **Added**: Server name validation (letters, numbers, dashes, underscores only)
+
+**v1.2.4 (June 26, 2025)**
+- **Attempted**: Fix server creation by omitting optional fields (didn't work)
+
+**v1.2.3 (June 26, 2025)**
+- **Fixed**: Code loading issue in server creation dialog
+- **Fixed**: Proper error handling and logging
+
+**v1.2.2 (June 26, 2025)**
+- **Fixed**: Default values for server creation (php_version and database_type)
+
+**v1.2.1 (June 26, 2025)**
+- **Fixed**: Home button visibility in server management screen
+
+**v1.2.0 (June 26, 2025)**
+- **Added**: Home button to main screen for easy navigation
+
+### Key Features
+- Multi-language support (Hebrew/English)
+- Server management with Ploi API integration
+- Real-time server status monitoring
+- Server creation with full provider support
+- Site management per server
+- Modern UI with proper loading states
+- Comprehensive error handling
+
+### Technical Stack
+- Flutter 3.8.1+
+- Ploi API integration
+- HTTP client with proper authentication
+- SharedPreferences for token storage
+- Material Design 3
+
+### Development Notes
+- All API calls include proper error handling and logging
+- Server creation requires proper name validation
+- Sites are loaded dynamically per server selection
+- Comprehensive state management for loading/error states
 
 --- 
