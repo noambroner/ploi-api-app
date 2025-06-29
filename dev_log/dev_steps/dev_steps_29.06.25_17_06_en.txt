@@ -1,0 +1,158 @@
+=== Development Log - 29.06.25 ===
+🕒 Date & Time: 29.06.2025, Sunday, 17:06 IDT
+Version: v1.9.5+1
+
+PROMPT: "אוקיי. אז בוא נריץ" (Okay. So let's run)
+Continued with: "לא. מפתחות כבר עובד מזמן. הבדיקה CURL זה כדי לראות אם יש קובץ INDEX. לא ככה לימדת אותי?" (No. SSH keys already work. The CURL check is to see if there's an INDEX file. Didn't you teach me this?)
+And also: "אז האינדיקציה לא נכונה ברשימת האתרים. צריך לבדוק CURL ולהציג ירוק רק למי שיש לו CURL. את הHTTPS נציג רק למי שתהיה תעודת SSL מותקנת." (So the indication is wrong in the sites list. Need to check CURL and show green only for those with CURL. HTTPS should only show for those with SSL certificate installed.)
+==================================================
+
+🎯 Execution Plan:
+1. Fix site status checking logic - green only for sites with real content
+2. Change CURL check from HEAD to full GET for content verification
+3. Update HTTPS display - green only for real SSL + content
+4. Fix status code display - 404 in red instead of 200 in green
+5. Test that the application works with the changes
+
+📋 What Was Actually Done:
+
+1. ✅ **Fixed CURL check in ploi_api_service.dart**:
+   - Changed from `curl -I` (HEAD) to `curl -s` (full GET)
+   - Added `-w '\\n---STATUS:%{http_code}---'` to get status code
+   - Fixed for Windows format with `\\` instead of `\`
+   - Added real content check vs 404/nginx default pages
+
+2. ✅ **Added real content detection logic**:
+   - Check if it's 404 page: `'404 not found'`, `'<h1>404</h1>'`
+   - Check if it's nginx default: `'welcome to nginx'`
+   - Detect real content: HTML tags + length > 200 characters
+   - Added `has_real_content` variable to results
+
+3. ✅ **Updated accessible logic in service**:
+   - `accessible = true` only if has real content
+   - `accessible = false` if 404 or nginx default
+   - Added `content_preview` for debugging
+
+4. ✅ **Fixed status display in main.dart**:
+   - Updated `_buildStatusIndicator`: green only if `hasRealContent = true`
+   - Updated `_buildStatusBadge`: 404 in red, 200 without content in orange
+   - Fixed HTTPS tag: green only if SSL + real content
+   - Updated tooltip with real content information
+
+5. ❌ **Issue running the application**:
+   - Encountered Windows build permission issues
+   - Error: "cannot open program database" and "insufficient privilege"
+   - Could not run the application for testing
+
+🔧 Detailed Technical Changes:
+
+**📁 File:** `lib/services/ploi_api_service.dart`
+
+**🔄 checkWebsiteAccessibility():**
+```dart
+// Before:
+'-I', // Head request only
+'-w', '%{http_code}', // Only output status code
+
+// After:
+'-s', // Silent mode - GET full body
+'-w', '\\n---STATUS:%{http_code}---', // Append status code at end
+```
+
+**🔍 Added real content detection:**
+```dart
+bool hasRealContent = false;
+bool isAccessible = false;
+
+if (lowerBody.contains('404 not found') || statusCode == 404) {
+  hasRealContent = false;
+  isAccessible = false;
+} else if (lowerBody.contains('welcome to nginx')) {
+  hasRealContent = false;
+  isAccessible = false;
+} else if (bodyContent.length > 200 && lowerBody.contains('<html')) {
+  hasRealContent = true;
+  isAccessible = true;
+}
+```
+
+**📁 File:** `lib/main.dart`
+
+**🔄 _buildStatusIndicator():**
+```dart
+// Before:
+if (isSuccess && statusCode >= 200 && statusCode < 300)
+
+// After:
+if (isSuccess && statusCode >= 200 && statusCode < 300 && hasRealContent)
+```
+
+**🔄 _buildStatusBadge():**
+```dart
+// Added hasRealContent check
+if (statusCode == 404) {
+  backgroundColor = Colors.red[100]!;
+  text = '404';
+} else if (statusCode >= 200 && statusCode < 300 && !hasRealContent) {
+  backgroundColor = Colors.orange[100]!; // Orange for sites without content
+}
+```
+
+**🔄 HTTPS tag:**
+```dart
+// Before:
+status['protocol'] == 'https'
+
+// After:
+status['protocol'] == 'https' && status['success'] == true && status['has_real_content'] == true
+```
+
+🚨 Errors/Issues Encountered:
+
+**❌ Build permission issue:**
+```
+LINK : fatal error LNK1201: error writing to program database
+insufficient privilege
+```
+
+**🔍 Failed solution attempts:**
+- `flutter clean` - failed due to locked files
+- `kill_and_clean.bat` - issues with Windows commands in bash
+- Manual deletion of build directory - unsuccessful
+
+🎯 Final Results:
+
+✅ **What Was Completed:**
+- Complete fix of site status checking logic
+- Changed from HEAD to GET with real content verification
+- Updated UI display for correct status
+- Added 404 vs real content detection
+- Fixed HTTPS display for only real SSL
+
+❌ **What Was Not Completed:**
+- Testing the changes in the application due to build issue
+- Verification that fixes work as expected
+
+🔄 **What's In Progress:**
+- Changes saved in code but not tested
+
+📋 Next Steps (for next session):
+1. **Fix build issue** - close processes locking files
+2. **Test changes** - run application to verify fixes
+3. **Verify correct display** - 404 in red, real content in green
+4. **Test HTTPS** - verify green only with real SSL
+
+📁 Files Modified:
+- `Projects/ploi_api_app/lib/services/ploi_api_service.dart` - Fixed CURL check and content logic
+- `Projects/ploi_api_app/lib/main.dart` - Updated status and HTTPS display
+
+💡 Important Notes:
+The changes made are fundamental and fix a significant issue - the application was showing green for sites with 404, which was misleading. Now it will display:
+- 🔴 404 - Sites with 404 error
+- 🟠 200 - Server responds but no content (nginx default)
+- 🟢 200 - Only sites with real content
+
+🎯 Key Achievement:
+**The application now distinguishes between "server works" and "site works with content"!**
+
+=== End of Log 29.06.25 17:06 === 
