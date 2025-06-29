@@ -1,0 +1,69 @@
+Development Log - 27.06.25 - Update 3 (English)
+=================================================
+
+Session Goals:
+- Fix 422 error in SSL certificate installation
+- Simplify UI and remove Staging option
+- Exact alignment with Ploi API
+
+Changes Made:
+=============
+
+1. Fixed SSL API Format:
+   - Removed unsupported 'staging' parameter
+   - Simplified data to: certificate + type only
+   - Aligned with official Ploi PHP SDK
+
+2. Improved API Connection Check:
+   - Test connection before SSL installation
+   - More detailed error messages
+   - Checklist for 422 errors
+
+3. Updated User Interface:
+   - Removed "Let's Encrypt Staging" option
+   - Simplified to two options: Let's Encrypt + Custom
+   - Removed Staging-related messages
+
+4. Version Update:
+   - New version: 1.3.5+32
+   - Updated app title
+
+Code Examples:
+==============
+
+New API Format (Simple):
+```dart
+Map<String, dynamic> data = {
+  'certificate': certificate,
+  'type': type == 'letsencrypt_staging' ? 'letsencrypt' : type,
+};
+```
+
+API Connection Check:
+```dart
+try {
+  print('  Testing API connection...');
+  await testConnection();
+  print('  ✅ API connection successful');
+} catch (e) {
+  throw Exception('API connection failed...');
+}
+```
+
+Fixed Errors:
+=============
+- 422 Error: "The given data was invalid"
+- 'staging' parameter not supported by Ploi API
+- Data format incompatible with PHP SDK
+
+Next Steps:
+===========
+- Test SSL installation with new format
+- Verify 422 error is resolved
+- Test multi-domain support
+
+Notes:
+======
+- New format matches official Ploi PHP SDK
+- Removed Staging as it doesn't work as expected
+- Added preliminary API connection check 

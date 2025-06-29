@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'services/ploi_api_service.dart';
 import 'dialogs/api_settings_dialog.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
@@ -189,7 +191,7 @@ class _PloiApiAppState extends State<PloiApiApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Ploi API App',
+              title: 'Ploi API Manager v1.9.10',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -272,7 +274,7 @@ class _MainDashboardState extends State<MainDashboard> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Ploi API Dashboard v1.2.15'),
+          title: Text('Ploi API Dashboard v1.9.5'),
           actions: [
             IconButton(
               icon: const Icon(Icons.settings),
@@ -1648,7 +1650,7 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
   bool isLoadingSites = false;
   List<Map<String, dynamic>> sites = [];
   String? sitesError;
-
+  Map<String, String> siteStatuses = {}; // Store simple status for each site
   @override
   void initState() {
     super.initState();
@@ -1675,6 +1677,9 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
           sites = sitesData;
           isLoadingSites = false;
         });
+        
+        // Check each site with CURL
+        _checkSitesWithCurl();
       }
     } catch (e) {
       setState(() {
@@ -1700,6 +1705,81 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
     final size = site['size'] ?? site['disk_usage'];
     if (size == null) return 'Size unknown';
     return size.toString();
+  }
+
+  // Simple CURL check for each site
+  Future<void> _checkSitesWithCurl() async {
+    for (final site in sites) {
+      final domain = _getSiteDomain(site);
+      if (domain == 'Unknown Domain') continue;
+      
+      _checkSingleSite(domain);
+    }
+  }
+
+  // Check single site with CURL
+  Future<void> _checkSingleSite(String domain) async {
+    try {
+      final result = await Process.run('curl', [
+        '-I', // HEAD request only
+        '-s', // Silent
+        '-w', '%{http_code}', // Write HTTP status code
+        '--connect-timeout', '3', // 3 second timeout
+        '--max-time', '5', // 5 second max time
+        'http://$domain',
+      ]);
+      
+      if (result.exitCode == 0) {
+        final fullOutput = result.stdout.toString();
+        final lines = fullOutput.split('\n');
+        final statusCode = lines.last.trim(); // Last line is the status code
+        final headers = lines.take(lines.length - 1).join('\n'); // Everything else is headers
+        
+        setState(() {
+          siteStatuses[domain] = '$statusCode|||$headers'; // Store both status and headers
+        });
+      } else {
+        setState(() {
+          siteStatuses[domain] = 'ERROR|||Connection failed';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        siteStatuses[domain] = 'FAIL|||Exception: $e';
+      });
+    }
+  }
+
+  // Extract status code from stored data
+  String _getStatusCode(String storedData) {
+    final parts = storedData.split('|||');
+    return parts[0]; // First part is the status code
+  }
+
+  // Extract headers/details from stored data
+  String _getStatusTooltip(String storedData) {
+    final parts = storedData.split('|||');
+    if (parts.length < 2) return parts[0];
+    
+    final statusCode = parts[0];
+    final headers = parts[1];
+    
+    String tooltip = 'Status: $statusCode\n\n';
+    if (headers.isNotEmpty) {
+      tooltip += 'Headers:\n$headers';
+    }
+    
+    return tooltip.trim();
+  }
+
+  // Get color based on status
+  Color _getStatusColor(String status) {
+    if (status == '200') return Colors.green;
+    if (status == '404') return Colors.red;
+    if (status.startsWith('3')) return Colors.orange; // Redirects
+    if (status.startsWith('4') || status.startsWith('5')) return Colors.red;
+    if (status == 'ERROR' || status == 'FAIL') return Colors.grey;
+    return Colors.blue; // Default
   }
 
   @override
@@ -1791,7 +1871,13 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
                       color: Colors.grey[800],
                     ),
                   ),
+
                   const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: _showCreateSiteDialog,
+                    tooltip: 'הוסף אתר חדש',
+                  ),
                   IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: _loadSites,
@@ -1915,57 +2001,523 @@ class _ServerManagementPageState extends State<ServerManagementPage> {
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      domain,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+              Row(
+                children: [
+                  // Simple site icon
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      repository,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                domain,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                                                         // Show CURL status
+                             if (siteStatuses.containsKey(domain))
+                               Tooltip(
+                                 message: _getStatusTooltip(siteStatuses[domain]!),
+                                 child: Container(
+                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                   decoration: BoxDecoration(
+                                     color: _getStatusColor(_getStatusCode(siteStatuses[domain]!)),
+                                     borderRadius: BorderRadius.circular(12),
+                                   ),
+                                   child: Text(
+                                     _getStatusCode(siteStatuses[domain]!),
+                                     style: const TextStyle(
+                                       color: Colors.white,
+                                       fontSize: 12,
+                                       fontWeight: FontWeight.bold,
+                                     ),
+                                   ),
+                                 ),
+                               ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          repository,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          size,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      size,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
+                  ),
+                  PopupMenuButton(
+                    icon: const Icon(Icons.more_vert),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'edit', child: Text('ערוך')),
+                      const PopupMenuItem(
+                        value: 'ssl',
+                        child: Row(
+                          children: [
+                            Icon(Icons.security, size: 16),
+                            SizedBox(width: 8),
+                            Text('הוסף SSL'),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton(
-                icon: const Icon(Icons.more_vert),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('ערוך')),
-                  const PopupMenuItem(value: 'delete', child: Text('מחק')),
+                      const PopupMenuItem(
+                        value: 'ssh_keys',
+                        child: Row(
+                          children: [
+                            Icon(Icons.vpn_key, size: 16),
+                            SizedBox(width: 8),
+                            Text('SSH Keys'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'sftp',
+                        child: Row(
+                          children: [
+                            Icon(Icons.folder_shared, size: 16),
+                            SizedBox(width: 8),
+                            Text('SFTP'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(value: 'delete', child: Text('מחק')),
+                    ],
+                    onSelected: (value) => _handleSiteMenuAction(value, site, domain),
+                  ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+
+
+
+
+  // Handle site menu actions
+  void _handleSiteMenuAction(String action, Map<String, dynamic> site, String domain) {
+    switch (action) {
+      case 'edit':
+        // Navigate to site management page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SiteManagementPage(
+              site: site,
+              serverData: widget.server,
+            ),
+          ),
+        );
+        break;
+      case 'ssl':
+        _showSSLDialog(site, domain);
+        break;
+      case 'ssh_keys':
+        _showSSHKeysDialog(site, domain);
+        break;
+      case 'sftp':
+        _showSFTPDialog(site, domain);
+        break;
+      case 'delete':
+        _showDeleteSiteDialog(site, domain);
+        break;
+    }
+  }
+
+  // Show SSL management dialog
+  void _showSSLDialog(Map<String, dynamic> site, String domain) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.security, color: Colors.green),
+            SizedBox(width: 8),
+            Text('הוספת SSL'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('הוסף SSL Certificate עבור "$domain"'),
+            const SizedBox(height: 16),
+            const Text(
+              'סוגי SSL זמינים:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.verified_user, color: Colors.green),
+              title: const Text('Let\'s Encrypt (חינם)'),
+              subtitle: const Text('SSL חינם ואוטומטי'),
+              onTap: () {
+                Navigator.pop(context);
+                _createLetsEncryptSSL(site, domain);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file, color: Colors.blue),
+              title: const Text('SSL מותאם אישית'),
+              subtitle: const Text('העלה SSL Certificate משלך'),
+              onTap: () {
+                Navigator.pop(context);
+                _showCustomSSLDialog(site, domain);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show SSH Keys management dialog
+  void _showSSHKeysDialog(Map<String, dynamic> site, String domain) {
+    showDialog(
+      context: context,
+      builder: (context) => SSHKeysDialog(
+        serverId: widget.server['id'],
+        serverName: widget.server['name'] ?? 'Unknown Server',
+        siteDomain: domain,
+      ),
+    );
+  }
+
+  // Create Let's Encrypt SSL
+  Future<void> _createLetsEncryptSSL(Map<String, dynamic> site, String domain) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('יוצר SSL Certificate...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        // Create Let's Encrypt SSL
+        await apiService.createSSLCertificate(
+          serverId: widget.server['id'],
+          siteId: site['id'],
+          type: 'letsencrypt',
+        );
+        
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+        
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('SSL Certificate נוצר בהצלחה עבור "$domain"')),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה ביצירת SSL: $e')),
+        );
+      }
+    }
+  }
+
+  // Show custom SSL dialog
+  void _showCustomSSLDialog(Map<String, dynamic> site, String domain) {
+    final certificateController = TextEditingController();
+    final privateKeyController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('SSL מותאם אישית - $domain'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: certificateController,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  labelText: 'Certificate (*.crt)',
+                  hintText: '-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: privateKeyController,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  labelText: 'Private Key (*.key)',
+                  hintText: '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (certificateController.text.isNotEmpty && privateKeyController.text.isNotEmpty) {
+                Navigator.pop(context);
+                _createCustomSSL(site, domain, certificateController.text, privateKeyController.text);
+              }
+            },
+            child: const Text('צור SSL'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Create custom SSL
+  Future<void> _createCustomSSL(Map<String, dynamic> site, String domain, String certificate, String privateKey) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('מעלה SSL Certificate...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        // Create custom SSL
+        await apiService.createSSLCertificate(
+          serverId: widget.server['id'],
+          siteId: site['id'],
+          type: 'custom',
+          certificate: certificate,
+          privateKey: privateKey,
+        );
+        
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+        
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('SSL Certificate הועלה בהצלחה עבור "$domain"')),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בהעלאת SSL: $e')),
+        );
+      }
+    }
+  }
+
+  // Show SFTP dialog
+  void _showSFTPDialog(Map<String, dynamic> site, String domain) {
+    showDialog(
+      context: context,
+      builder: (context) => SFTPDialog(
+        serverId: widget.server['id'],
+        siteId: site['id'],
+        siteDomain: domain,
+        serverIp: widget.server['ip_address'],
+      ),
+    );
+  }
+
+  // Show site deletion confirmation dialog
+  void _showDeleteSiteDialog(Map<String, dynamic> site, String domain) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('מחיקת אתר'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('האם אתה בטוח שברצונך למחוק את האתר "$domain"?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: const Text(
+                '⚠️ פעולה זו תמחק את האתר לצמיתות ולא ניתן לבטל אותה!',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteSite(site['id'], domain);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('מחק אתר'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Delete site implementation
+  Future<void> _deleteSite(int siteId, String domain) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('מוחק אתר...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        // Call delete site API
+        await apiService.deleteSite(widget.server['id'], siteId);
+        
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+        
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('האתר "$domain" נמחק בהצלחה')),
+          );
+          
+          // Refresh sites list
+          _loadSites();
+        }
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה במחיקת האתר: $e')),
+        );
+      }
+    }
+  }
+
+
+
+
+  void _showCreateSiteDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => CreateSiteDialog(
+        serverId: widget.server['id'],
+        onSiteCreated: () {
+          _loadSites(); // Refresh sites list after creation
+        },
       ),
     );
   }
@@ -3925,23 +4477,22 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
               ),
               const SizedBox(height: 8),
               
-              RadioListTile<String>(
-                title: const Text('Let\'s Encrypt (חינם)'),
-                subtitle: const Text('תעודה אוטומטית עם חידוש אוטומטי'),
-                value: 'letsencrypt',
-                groupValue: _certificateType,
-                onChanged: (value) {
-                  setState(() {
-                    _certificateType = value!;
-                  });
-                },
-              ),
-              
-              RadioListTile<String>(
-                title: const Text('Custom Certificate'),
-                subtitle: const Text('העלה תעודה מותאמת אישית'),
-                value: 'custom',
-                groupValue: _certificateType,
+              DropdownButtonFormField<String>(
+                value: _certificateType,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  helperText: 'בחר את סוג התעודה המתאים',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'letsencrypt',
+                    child: Text('Let\'s Encrypt'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'custom',
+                    child: Text('Custom Certificate'),
+                  ),
+                ],
                 onChanged: (value) {
                   setState(() {
                     _certificateType = value!;
@@ -4011,6 +4562,10 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
                       '• התעודה תתחדש אוטומטית',
                       style: TextStyle(fontSize: 12),
                     ),
+                    const Text(
+                      '• Let\'s Encrypt מגביל 5 תעודות לדומיין בשבוע',
+                      style: TextStyle(fontSize: 12, color: Colors.orange),
+                    ),
                   ],
                 ),
               ),
@@ -4022,6 +4577,7 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
             onPressed: _isLoading ? null : () => Navigator.pop(context),
             child: const Text('ביטול'),
           ),
+
           ElevatedButton(
             onPressed: _isLoading ? null : _installSSL,
             child: _isLoading 
@@ -4043,13 +4599,50 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
     });
     
     try {
-      // Simulate SSL installation process
-      await Future.delayed(const Duration(seconds: 3));
+      final ploiService = PloiApiService();
+      
+      // Verify API is configured
+      if (!ploiService.isConfigured) {
+        throw Exception('API Token לא מוגדר. אנא הגדר את ה-Token בהגדרות.');
+      }
+      
+      final serverId = widget.site['server_id'] ?? widget.site['id'] ?? 1;
+      final siteId = widget.site['id'] ?? 1;
+      
+      // Parse domains
+      final domains = _domainsController.text
+          .split(',')
+          .map((d) => d.trim())
+          .where((d) => d.isNotEmpty)
+          .toList();
+      
+      if (domains.isEmpty) {
+        throw Exception('יש להזין לפחות דומיין אחד');
+      }
+      
+      // For Let's Encrypt, use first domain only (Ploi might not support multiple domains in one request)
+      String certificateValue;
+      if (_certificateType == 'letsencrypt') {
+        certificateValue = domains.first; // Use only first domain for Let's Encrypt
+      } else {
+        certificateValue = domains.join(','); // For custom certificates, join all domains
+      }
+      
+      // Test API connection first
+      await ploiService.testConnection();
+      
+      // Install certificate - REAL API CALL
+      final result = await ploiService.installSSLCertificate(
+        serverId: serverId,
+        siteId: siteId,
+        certificate: certificateValue,
+        type: _certificateType,
+      );
       
       if (mounted) {
         Navigator.pop(context);
         
-        // Show success dialog
+        // Show success dialog with more details
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -4064,11 +4657,15 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('תעודת SSL הותקנה בהצלחה:'),
+                const Text('בקשת התקנת SSL נשלחה בהצלחה:'),
                 const SizedBox(height: 8),
-                Text('• דומיין: ${_domainsController.text}'),
+                Text('• דומיינים: ${domains.join(', ')}'),
                 Text('• סוג: ${_certificateType == 'letsencrypt' ? 'Let\'s Encrypt' : 'Custom'}'),
-                const Text('• סטטוס: פעיל'),
+                Text('• מזהה תעודה: ${result['data']?['id'] ?? result['id'] ?? 'לא זמין'}'),
+                Text('• סטטוס: ${result['data']?['status'] ?? result['status'] ?? 'בתהליך'}'),
+                const SizedBox(height: 8),
+                Text('• Server ID: $serverId'),
+                Text('• Site ID: $siteId'),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -4076,11 +4673,41 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
                     color: Colors.green[50],
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
-                    'האתר כעת מאובטח עם HTTPS!',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '⚠️ זה לא מבטיח שה-SSL הותקן!',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'בדוק בעוד מספר דקות אם התעודה באמת פעילה.\nאם יש שגיאה, היא תופיע בלוגים של Ploi.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
                   ),
                 ),
+                if (result.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ExpansionTile(
+                    title: const Text('פרטים טכניים'),
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          result.toString(),
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
             actions: [
@@ -4094,10 +4721,108 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('שגיאה בהתקנת SSL: $e'),
-            backgroundColor: Colors.red,
+        // Check if it's a rate limiting error
+        final isRateLimitError = e.toString().contains('too many certificates') || 
+                                e.toString().contains('rate limit') ||
+                                e.toString().contains('168h');
+        
+        // Show detailed error dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(
+                  isRateLimitError ? Icons.access_time : Icons.error, 
+                  color: isRateLimitError ? Colors.orange[600] : Colors.red[600]
+                ),
+                const SizedBox(width: 8),
+                Text(isRateLimitError ? 'מגבלת Let\'s Encrypt' : 'שגיאה בהתקנת SSL'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isRateLimitError) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🚨 הגעת למגבלת Let\'s Encrypt',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[700],
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Let\'s Encrypt מגביל 5 תעודות לאותו דומיין בשבוע (168 שעות).',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '💡 פתרונות מומלצים:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const Text('• המתן שבוע מלא ונסה שוב'),
+                        const Text('• השתמש ב-Let\'s Encrypt Staging לבדיקות'),
+                        const Text('• השתמש בתעודה Custom במקום'),
+                        const Text('• בדוק אם יש תעודה קיימת שעובדת'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                const Text('פרטי השגיאה:'),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isRateLimitError ? Colors.grey[50] : Colors.red[50],
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: isRateLimitError ? Colors.grey[300]! : Colors.red[200]!,
+                    ),
+                  ),
+                  child: Text(
+                    e.toString(),
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'אפשרויות לפתרון כלליות:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                if (!isRateLimitError) ...[
+                  const Text('• ודא שה-API Token תקף'),
+                  const Text('• בדוק שה-DNS מצביע לשרת הנכון'),
+                  const Text('• ודא שהדומיין נגיש מהאינטרנט'),
+                  const Text('• נסה שוב בעוד מספר דקות'),
+                ] else ...[
+                  const Text('• בדוק בלוג Ploi אם יש תעודות קיימות'),
+                  const Text('• שקול להשתמש בתעודה Custom'),
+                  const Text('• צור קשר עם תמיכת Ploi במידת הצורך'),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('סגור'),
+              ),
+            ],
           ),
         );
       }
@@ -4114,5 +4839,1853 @@ class _SSLInstallDialogState extends State<SSLInstallDialog> {
   void dispose() {
     _domainsController.dispose();
     super.dispose();
+  }
+}
+
+// Create Site Dialog
+class CreateSiteDialog extends StatefulWidget {
+  final int serverId;
+  final VoidCallback onSiteCreated;
+
+  const CreateSiteDialog({
+    super.key,
+    required this.serverId,
+    required this.onSiteCreated,
+  });
+
+  @override
+  State<CreateSiteDialog> createState() => _CreateSiteDialogState();
+}
+
+class _CreateSiteDialogState extends State<CreateSiteDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _domainController = TextEditingController();
+  bool _isLoading = false;
+  bool _showAdvanced = false;
+  
+  // Basic settings
+  String _projectType = 'php';
+  String _phpVersion = '8.3';
+  String _webDirectory = '/public';
+  
+  // Advanced settings
+  String _gitRepository = '';
+  String _gitBranch = 'main';
+  bool _installRepository = false;
+  bool _installComposer = true;
+  bool _installNpm = false;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        title: const Text('יצירת אתר חדש'),
+        content: SizedBox(
+          width: 500,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Domain field
+                  TextFormField(
+                    controller: _domainController,
+                    decoration: const InputDecoration(
+                      labelText: 'דומיין האתר',
+                      hintText: 'example.com',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'יש להזין דומיין';
+                      }
+                      return null;
+                    },
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Project type
+                  DropdownButtonFormField<String>(
+                    value: _projectType,
+                    decoration: const InputDecoration(
+                      labelText: 'סוג פרויקט',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'php', child: Text('PHP')),
+                      DropdownMenuItem(value: 'laravel', child: Text('Laravel')),
+                      DropdownMenuItem(value: 'wordpress', child: Text('WordPress')),
+                      DropdownMenuItem(value: 'nodejs', child: Text('Node.js')),
+                      DropdownMenuItem(value: 'static', child: Text('Static HTML')),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _projectType = value!;
+                        // Auto-adjust settings based on project type
+                        if (value == 'laravel') {
+                          _webDirectory = '/public';
+                          _installComposer = true;
+                          _installNpm = false;
+                        } else if (value == 'wordpress') {
+                          _webDirectory = '/';
+                          _installComposer = false;
+                          _installNpm = false;
+                        } else if (value == 'nodejs') {
+                          _webDirectory = '/dist';
+                          _installComposer = false;
+                          _installNpm = true;
+                        } else if (value == 'static') {
+                          _webDirectory = '/';  // Static HTML צריך root directory
+                          _installComposer = false;
+                          _installNpm = false;
+                        } else if (value == 'php') {
+                          _webDirectory = '/public';
+                          _installComposer = false;
+                          _installNpm = false;
+                        }
+                      });
+                    },
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // PHP Version (only for PHP projects)
+                  if (_projectType == 'php' || _projectType == 'laravel' || _projectType == 'wordpress')
+                    DropdownButtonFormField<String>(
+                      value: _phpVersion,
+                      decoration: const InputDecoration(
+                        labelText: 'גרסת PHP',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: '8.3', child: Text('PHP 8.3')),
+                        DropdownMenuItem(value: '8.2', child: Text('PHP 8.2')),
+                        DropdownMenuItem(value: '8.1', child: Text('PHP 8.1')),
+                        DropdownMenuItem(value: '7.4', child: Text('PHP 7.4')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _phpVersion = value!;
+                        });
+                      },
+                    ),
+                  
+                  if (_projectType == 'php' || _projectType == 'laravel' || _projectType == 'wordpress')
+                    const SizedBox(height: 16),
+                  
+                  // Web directory
+                  TextFormField(
+                    initialValue: _webDirectory,
+                    decoration: const InputDecoration(
+                      labelText: 'תיקיית Web',
+                      hintText: '/public',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _webDirectory = value;
+                    },
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Advanced settings toggle
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _showAdvanced,
+                        onChanged: (value) {
+                          setState(() {
+                            _showAdvanced = value!;
+                          });
+                        },
+                      ),
+                      const Text('הגדרות מתקדמות'),
+                    ],
+                  ),
+                  
+                  // Advanced settings
+                  if (_showAdvanced) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'הגדרות Git',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          
+                          // Git repository
+                          TextFormField(
+                            initialValue: _gitRepository,
+                            decoration: const InputDecoration(
+                              labelText: 'Git Repository (אופציונלי)',
+                              hintText: 'https://github.com/user/repo.git',
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (value) {
+                              _gitRepository = value;
+                              setState(() {
+                                _installRepository = value.isNotEmpty;
+                              });
+                            },
+                          ),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // Git branch
+                          if (_gitRepository.isNotEmpty)
+                            TextFormField(
+                              initialValue: _gitBranch,
+                              decoration: const InputDecoration(
+                                labelText: 'Git Branch',
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (value) {
+                                _gitBranch = value;
+                              },
+                            ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          const Text(
+                            'התקנות נוספות',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          
+                          // Installation options
+                          CheckboxListTile(
+                            title: const Text('התקן Composer'),
+                            value: _installComposer,
+                            onChanged: (value) {
+                              setState(() {
+                                _installComposer = value!;
+                              });
+                            },
+                          ),
+                          
+                          CheckboxListTile(
+                            title: const Text('התקן NPM'),
+                            value: _installNpm,
+                            onChanged: (value) {
+                              setState(() {
+                                _installNpm = value!;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isLoading ? null : () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: _isLoading ? null : _createSite,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('צור אתר'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _createSite() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final ploiService = PloiApiService();
+      
+      // Verify API is configured
+      if (!ploiService.isConfigured) {
+        throw Exception('API Token לא מוגדר. אנא הגדר את ה-Token בהגדרות.');
+      }
+      
+      // Prepare site data - Based on Ploi API format
+      final siteData = <String, dynamic>{
+        'root_domain': _domainController.text.trim(),
+        'web_directory': _webDirectory,
+        'project_directory': '/',
+        'system_user': 'ploi',
+      };
+      
+      // Add project type if not default
+      if (_projectType != 'php') {
+        siteData['project_type'] = _projectType;
+      }
+      
+      // Add PHP version for PHP projects
+      if (_projectType == 'php' || _projectType == 'laravel' || _projectType == 'wordpress') {
+        siteData['php_version'] = _phpVersion;
+      }
+      
+      // Add Git settings if provided
+      if (_gitRepository.isNotEmpty) {
+        siteData['repository'] = _gitRepository;
+        siteData['branch'] = _gitBranch;
+        siteData['install_repository'] = _installRepository;
+      }
+      
+      // Add installation settings only if they're not default
+      if (_installComposer) {
+        siteData['install_composer'] = _installComposer;
+      }
+      if (_installNpm) {
+        siteData['install_npm'] = _installNpm;
+      }
+      
+      // Call the API to create the site
+      final createResult = await ploiService.createSite(widget.serverId, siteData);
+      debugPrint('✅ [CREATE_SITE] Site created successfully: $createResult');
+      
+      // Get the newly created site ID
+      final newSiteId = createResult['data']['id'];
+      final siteDomain = _domainController.text.trim();
+      
+      debugPrint('🌐 [CREATE_SITE] Attempting to create basic website for site ID: $newSiteId');
+      
+      if (mounted) {
+        Navigator.pop(context);
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'האתר "$siteDomain" נוצר בהצלחה!\n'
+              'כעת תוכל להעלות קבצים באמצעות SFTP.',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        
+        // Refresh sites list
+        widget.onSiteCreated();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה ביצירת האתר: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+  
+  @override
+  void dispose() {
+    _domainController.dispose();
+    super.dispose();
+  }
+}
+
+// SSH Keys Management Dialog
+class SSHKeysDialog extends StatefulWidget {
+  final int serverId;
+  final String serverName;
+  final String siteDomain;
+
+  const SSHKeysDialog({
+    super.key,
+    required this.serverId,
+    required this.serverName,
+    required this.siteDomain,
+  });
+
+  @override
+  State<SSHKeysDialog> createState() => _SSHKeysDialogState();
+}
+
+class _SSHKeysDialogState extends State<SSHKeysDialog> {
+  List<Map<String, dynamic>> sshKeys = [];
+  bool isLoading = true;
+  String? error;
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController keyController = TextEditingController();
+  String generatedPublicKey = '';
+  String keyFingerprint = '';
+  String keyType = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSSHKeys();
+    // Don't generate key automatically - only when user clicks button
+    debugPrint('🔑 [MAIN] SSH Keys dialog initialized without auto-generating key');
+  }
+  
+  Future<void> _generateNewKey() async {
+    try {
+      debugPrint('🔑 [MAIN] Starting SSH key generation from main.dart...');
+      final keyData = await PloiApiService().generateSSHKeyPair();
+      debugPrint('✅ [MAIN] SSH key generation successful in main.dart');
+      debugPrint('📋 [MAIN] Key type: ${keyData['key_type']}');
+      debugPrint('📋 [MAIN] Note: ${keyData['note']}');
+      
+      setState(() {
+        generatedPublicKey = keyData['public_key'] ?? '';
+        keyFingerprint = keyData['fingerprint'] ?? '';
+        keyType = keyData['key_type'] ?? 'RSA 2048-bit';
+        keyController.text = generatedPublicKey;
+      });
+    } catch (e) {
+      debugPrint('❌ [MAIN] SSH key generation failed in main.dart: $e');
+      debugPrint('📝 [MAIN] Stack trace: ${StackTrace.current}');
+      // Fallback to demo key if generation fails
+      setState(() {
+        generatedPublicKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYwd6O4Z+STMxTlFCPcN8VAq9ZNKvaQRYbsEDKK0ydvTxdwt72xRo8supYX1vgDgRpYBhgDy8OPEMLDuk61sXRdbTITFW1B98rUsvvLEYHM4wJQnkWZvcyZz79id2H3r75ow+EL6SF4zxrSnJ9Ax09cKN2oM3nQUn0jkaqG4Hb/thbKbF8SzevBrcI0Ld4K64Mduc2XQbW2qMikT4xPBtu7bwPuP1XhipZOBcCBnXdrWCZk6pfYtA/aq5En7a2JAyglIpEsAIbtSVmj62BgstmSOy/4tQjVinh6IG8y8ixq59GbmC8KP9zUQ3hhLfT/nqreXpeh039cotUTWJHyVOB demo@fallback';
+        keyFingerprint = 'SHA256:demo:key:fingerprint';
+        keyType = 'RSA 2048-bit (Demo)';
+        keyController.text = generatedPublicKey;
+      });
+    }
+  }
+
+  Future<void> _loadSSHKeys() async {
+    try {
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        final keys = await apiService.getSSHKeys(widget.serverId);
+        
+        setState(() {
+          sshKeys = keys;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _addSSHKey() async {
+    if (nameController.text.trim().isEmpty || keyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('אנא מלא את כל השדות')),
+      );
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        await apiService.createSSHKey(
+          serverId: widget.serverId,
+          name: nameController.text.trim(),
+          key: keyController.text.trim(),
+        );
+        
+        nameController.clear();
+        await _generateNewKey(); // Generate new key for next use
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('SSH Key נוסף בהצלחה')),
+          );
+        }
+        
+        _loadSSHKeys(); // Refresh list
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בהוספת SSH Key: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteSSHKey(int keyId, String keyName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('מחיקת SSH Key'),
+        content: Text('האם אתה בטוח שברצונך למחוק את המפתח "$keyName"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('מחק'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('ploi_api_token');
+        
+        if (token != null) {
+          final apiService = PloiApiService();
+          await apiService.setApiToken(token);
+          
+          await apiService.deleteSSHKey(widget.serverId, keyId);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('SSH Key נמחק בהצלחה')),
+            );
+          }
+          
+          _loadSSHKeys(); // Refresh list
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('שגיאה במחיקת SSH Key: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showRealKeyInstructions() async {
+    try {
+      debugPrint('🔑 [MAIN] Starting SSH key generation for instructions dialog...');
+      final keyData = await PloiApiService().generateSSHKeyPair();
+      debugPrint('✅ [MAIN] SSH key generation successful for instructions dialog');
+      debugPrint('📋 [MAIN] Key type: ${keyData['key_type']}');
+      debugPrint('📋 [MAIN] Note: ${keyData['note']}');
+      
+      final isRealKey = keyData['key_type']!.contains('אמיתי');
+      debugPrint('🔍 [MAIN] Is real key: $isRealKey');
+      
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(
+                  isRealKey ? Icons.vpn_key : Icons.warning,
+                  color: isRealKey ? Colors.green : Colors.orange,
+                ),
+                const SizedBox(width: 8),
+                Text(isRealKey ? 'מפתח SSH אמיתי נוצר!' : 'הוראות יצירת מפתח SSH'),
+              ],
+            ),
+            content: SizedBox(
+              width: 500,
+              height: 600,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Status indicator
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isRealKey ? Colors.green[50] : Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isRealKey ? Colors.green[200]! : Colors.orange[200]!,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                isRealKey ? Icons.check_circle : Icons.info,
+                                color: isRealKey ? Colors.green[600] : Colors.orange[600],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                keyData['note']!,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isRealKey ? Colors.green[800] : Colors.orange[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'סוג מפתח: ${keyData['key_type']}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            'טביעת אצבע: ${keyData['fingerprint']}',
+                            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Instructions
+                    const Text(
+                      'הוראות שימוש:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(keyData['instructions']!),
+                    const SizedBox(height: 16),
+                    
+                    if (isRealKey) ...[
+                      const Text(
+                        'המפתח הציבורי שנוצר:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  'מפתח ציבורי (העתק את כל הטקסט):',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                const Spacer(),
+                                TextButton.icon(
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: keyData['public_key']!));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('מפתח הועתק ללוח')),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.copy, size: 16),
+                                  label: const Text('העתק'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SelectableText(
+                              keyData['public_key']!,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.terminal, color: Colors.blue[600], size: 20),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'צעדים מפורטים ליצירת מפתח אמיתי:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Text('1. פתח Terminal/Git Bash'),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.black87,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const SelectableText(
+                                'ssh-keygen -t rsa -b 2048 -C "your-email@example.com"',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text('2. לחץ Enter פעמיים (בלי סיסמה)'),
+                            const SizedBox(height: 8),
+                            const Text('3. העתק את המפתח הציבורי:'),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.black87,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const SelectableText(
+                                'cat ~/.ssh/id_rsa.pub',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text('4. הדבק את התוכן בשדה "Public Key" למעלה'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              if (isRealKey)
+                TextButton.icon(
+                  onPressed: () {
+                    // Copy the key to the field
+                    setState(() {
+                      keyController.text = keyData['public_key']!;
+                      generatedPublicKey = keyData['public_key']!;
+                      keyFingerprint = keyData['fingerprint']!;
+                      keyType = keyData['key_type']!;
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('מפתח אמיתי הועתק לשדה!')),
+                    );
+                  },
+                  icon: const Icon(Icons.check),
+                  label: const Text('השתמש במפתח זה'),
+                ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('סגור'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ [MAIN] Error in _showRealKeyInstructions: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה ביצירת מפתח: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: 600,
+        height: 750,
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.vpn_key, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'SSH Keys - ${widget.serverName}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Add new SSH Key section
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'הוסף SSH Key חדש',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            TextButton.icon(
+                              onPressed: _showRealKeyInstructions,
+                              icon: const Icon(Icons.help_outline, size: 16),
+                              label: const Text('איך ליצור מפתח אמיתי?'),
+                            ),
+                            TextButton.icon(
+                              onPressed: _generateNewKey,
+                              icon: const Icon(Icons.vpn_key, size: 16),
+                              label: const Text('יצור מפתח SSH אמיתי'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'שם המפתח',
+                        hintText: 'למשל: DataFlow Key',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Show key info only if a key was generated
+                    if (generatedPublicKey.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: keyType.contains('אמיתי') ? Colors.green[50] : Colors.orange[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: keyType.contains('אמיתי') ? Colors.green[200]! : Colors.orange[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  keyType.contains('אמיתי') ? Icons.vpn_key : Icons.warning, 
+                                  color: keyType.contains('אמיתי') ? Colors.green[600] : Colors.orange[600], 
+                                  size: 16
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  keyType.contains('אמיתי') ? 'מפתח SSH אמיתי נוצר!' : 'מפתח SSH לדמו בלבד',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: keyType.contains('אמיתי') ? Colors.green[800] : Colors.orange[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text('סוג: $keyType', style: const TextStyle(fontSize: 12)),
+                            Text('טביעת אצבע: $keyFingerprint', 
+                                 style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
+                            if (!keyType.contains('אמיתי')) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[50],
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.red[200]!),
+                                ),
+                                child: Text(
+                                  '⚠️ זה מפתח דמו! לשימוש אמיתי, צור מפתח SSH אמיתי ועדכן את השדה',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.red[800],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: keyController,
+                      maxLines: 4,
+                      readOnly: false,
+                      decoration: InputDecoration(
+                        labelText: generatedPublicKey.isEmpty ? 'Public Key' : 
+                                  (keyType.contains('אמיתי') ? 'מפתח SSH אמיתי' : 'Public Key (ערוך לשימוש אמיתי)'),
+                        hintText: generatedPublicKey.isEmpty ? 'לחץ על "יצור מפתח SSH אמיתי" כדי ליצור מפתח' :
+                                 (keyType.contains('אמיתי') ? 'מפתח SSH אמיתי מוכן לשימוש!' : 'החלף במפתח SSH אמיתי או השתמש במפתח הדמו לבדיקות'),
+                        border: const OutlineInputBorder(),
+                        helperText: keyType.contains('אמיתי') ? 'מפתח אמיתי נוצר בהצלחה!' : 'לשימוש אמיתי: ssh-keygen -t rsa -b 2048',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _addSSHKey,
+                      icon: const Icon(Icons.add),
+                      label: const Text('הוסף SSH Key'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Existing SSH Keys list
+            const Text(
+              'SSH Keys קיימים',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            
+            // SSH Keys content
+            SizedBox(
+              height: 200,
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error, color: Colors.red, size: 48),
+                              const SizedBox(height: 8),
+                              Text('שגיאה: $error'),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: _loadSSHKeys,
+                                child: const Text('נסה שוב'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : sshKeys.isEmpty
+                          ? const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.vpn_key_off, color: Colors.grey, size: 48),
+                                  SizedBox(height: 8),
+                                  Text('אין SSH Keys'),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: sshKeys.length,
+                              itemBuilder: (context, index) {
+                                final key = sshKeys[index];
+                                return Card(
+                                  child: ListTile(
+                                    leading: const Icon(Icons.vpn_key, color: Colors.blue),
+                                    title: Text(key['name'] ?? 'Unnamed Key'),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('User: ${key['system_user'] ?? 'ploi'}'),
+                                        Text(
+                                          'Key: ${(key['key'] ?? '').substring(0, (key['key'] ?? '').length > 50 ? 50 : (key['key'] ?? '').length)}...',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: IconButton(
+                                      onPressed: () => _deleteSSHKey(
+                                        key['id'],
+                                        key['name'] ?? 'Unnamed Key',
+                                      ),
+                                      icon: const Icon(Icons.delete, color: Colors.red),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+            ),
+          ],
+        ),
+          ),
+      ),
+    );
+  }
+}
+
+// SFTP Dialog - File management for sites
+class SFTPDialog extends StatefulWidget {
+  final int serverId;
+  final int siteId;
+  final String siteDomain;
+  final String serverIp;
+
+  const SFTPDialog({
+    super.key,
+    required this.serverId,
+    required this.siteId,
+    required this.siteDomain,
+    required this.serverIp,
+  });
+
+  @override
+  State<SFTPDialog> createState() => _SFTPDialogState();
+}
+
+class _SFTPDialogState extends State<SFTPDialog> {
+  bool isConnected = false;
+  bool isConnecting = false;
+  String currentPath = '/';
+  List<Map<String, dynamic>> files = [];
+  bool isLoading = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectToSFTP();
+  }
+
+  Future<void> _connectToSFTP() async {
+    setState(() {
+      isConnecting = true;
+      error = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token == null) {
+        throw Exception('לא נמצא API Token');
+      }
+      
+      final apiService = PloiApiService();
+      await apiService.setApiToken(token);
+      
+      // Set default path for site
+      currentPath = '/home/ploi/${widget.siteDomain}';
+      
+      setState(() {
+        isConnected = true;
+        isConnecting = false;
+      });
+      
+      _loadFiles();
+      
+    } catch (e) {
+      setState(() {
+        error = 'שגיאה בהתחברות: $e';
+        isConnecting = false;
+      });
+    }
+  }
+
+  Future<void> _loadFiles() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token == null) {
+        throw Exception('לא נמצא API Token');
+      }
+      
+      final apiService = PloiApiService();
+      await apiService.setApiToken(token);
+      
+      final result = await apiService.listSiteFiles(
+        serverId: widget.serverId,
+        siteId: widget.siteId,
+        path: currentPath,
+      );
+      
+      if (result['success'] == true) {
+        final filesList = List<Map<String, dynamic>>.from(result['files'] ?? []);
+        setState(() {
+          files = filesList;
+          isLoading = false;
+        });
+      } else {
+        throw Exception(result['error'] ?? 'Failed to list files');
+      }
+    } catch (e) {
+      setState(() {
+        error = 'שגיאה בטעינת קבצים: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: 800,
+        height: 600,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                const Icon(Icons.folder_shared, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'SFTP - ${widget.siteDomain}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                if (isConnected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, size: 16, color: Colors.green[800]),
+                        const SizedBox(width: 4),
+                        Text('מחובר', style: TextStyle(color: Colors.green[800], fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            if (isConnecting)
+              const Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('מתחבר ל-SFTP...'),
+                  ],
+                ),
+              )
+            else if (error != null)
+              Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.error, size: 48, color: Colors.red[400]),
+                    const SizedBox(height: 16),
+                    Text(error!, style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _connectToSFTP,
+                      child: const Text('נסה שוב'),
+                    ),
+                  ],
+                ),
+              )
+            else if (isConnected)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Path bar
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          if (currentPath != '/home/ploi/${widget.siteDomain}')
+                            IconButton(
+                              onPressed: _navigateBack,
+                              icon: const Icon(Icons.arrow_back, size: 16),
+                              tooltip: 'חזור לתיקייה הקודמת',
+                            ),
+                          const Icon(Icons.folder, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Text(
+                                currentPath,
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _loadFiles,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            tooltip: 'רענן',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Action buttons
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _showUploadDialog,
+                          icon: const Icon(Icons.upload_file),
+                          label: const Text('העלה קובץ'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _showCreateFolderDialog,
+                          icon: const Icon(Icons.create_new_folder),
+                          label: const Text('צור תיקייה'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Files list
+                    Expanded(
+                      child: isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : _buildFilesList(),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilesList() {
+    if (files.isEmpty) {
+      return const Center(
+        child: Text('התיקייה ריקה'),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: files.length,
+      itemBuilder: (context, index) {
+        final file = files[index];
+        final isDirectory = file['type'] == 'directory';
+        
+        return ListTile(
+          leading: Icon(
+            isDirectory ? Icons.folder : Icons.insert_drive_file,
+            color: isDirectory ? Colors.blue : Colors.grey[600],
+          ),
+          title: Text(file['name']),
+          subtitle: isDirectory 
+              ? null 
+              : Text('${file['size']} bytes • ${file['modified']}'),
+          trailing: PopupMenuButton(
+            itemBuilder: (context) => [
+              if (!isDirectory)
+                const PopupMenuItem(
+                  value: 'download',
+                  child: Row(
+                    children: [
+                      Icon(Icons.download, size: 16),
+                      SizedBox(width: 8),
+                      Text('הורד'),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 16, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('מחק', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (value) => _handleFileAction(value.toString(), file),
+          ),
+          onTap: isDirectory ? () => _navigateToFolder(file['name']) : null,
+        );
+      },
+    );
+  }
+
+  void _navigateToFolder(String folderName) {
+    setState(() {
+      currentPath = currentPath.endsWith('/') 
+          ? '$currentPath$folderName'
+          : '$currentPath/$folderName';
+    });
+    _loadFiles();
+  }
+
+  void _navigateBack() {
+    if (currentPath != '/home/ploi/${widget.siteDomain}') {
+      setState(() {
+        // Remove the last directory from the path
+        final pathParts = currentPath.split('/');
+        if (pathParts.length > 1) {
+          pathParts.removeLast();
+          currentPath = pathParts.join('/');
+          if (currentPath.isEmpty) {
+            currentPath = '/';
+          }
+        }
+      });
+      _loadFiles();
+    }
+  }
+
+  void _handleFileAction(String action, Map<String, dynamic> file) {
+    switch (action) {
+      case 'download':
+        _downloadFile(file);
+        break;
+      case 'delete':
+        _deleteFile(file);
+        break;
+    }
+  }
+
+  void _downloadFile(Map<String, dynamic> file) async {
+    final fileName = file['name'];
+    final filePath = '$currentPath/$fileName';
+    
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('מוריד קובץ...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        final result = await apiService.downloadFileFromSite(
+          serverId: widget.serverId,
+          siteId: widget.siteId,
+          remotePath: filePath,
+        );
+        
+        if (mounted) Navigator.pop(context); // Close loading dialog
+        
+        if (result['success'] == true) {
+          // Show file content in a dialog
+          if (mounted) _showFileContentDialog(result['file_name'], result['file_content']);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('שגיאה בהורדת קובץ: ${result['error']}')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בהורדת קובץ: $e')),
+        );
+      }
+    }
+  }
+
+  void _showFileContentDialog(String fileName, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 700,
+          height: 600,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.description, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Text(
+                    'תוכן הקובץ - $fileName',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      content,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('סגור'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _deleteFile(Map<String, dynamic> file) {
+    final fileName = file['name'];
+    final isDirectory = file['type'] == 'directory';
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            const SizedBox(width: 8),
+            Text('מחיקת ${isDirectory ? 'תיקייה' : 'קובץ'}'),
+          ],
+        ),
+        content: Text(
+          'האם אתה בטוח שברצונך למחוק את ${isDirectory ? 'התיקייה' : 'הקובץ'} "$fileName"?\n\n'
+          '${isDirectory ? '⚠️ פעולה זו תמחק את התיקייה וכל תוכנה!' : '⚠️ פעולה זו אינה ניתנת לביטול!'}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _performDelete(file);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('מחק'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performDelete(Map<String, dynamic> file) async {
+    final fileName = file['name'];
+    final filePath = '$currentPath/$fileName';
+    
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('מוחק...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        final result = await apiService.deleteFileFromSite(
+          serverId: widget.serverId,
+          siteId: widget.siteId,
+          remotePath: filePath,
+        );
+        
+        if (mounted) Navigator.pop(context); // Close loading dialog
+        
+        if (result['success'] == true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$fileName נמחק בהצלחה')),
+            );
+          }
+          _loadFiles(); // Refresh file list
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('שגיאה במחיקה: ${result['error']}')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה במחיקה: $e')),
+        );
+      }
+    }
+  }
+
+  void _showUploadDialog() {
+    final fileNameController = TextEditingController();
+    final fileContentController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 500,
+          height: 500,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.upload_file, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'העלאת קובץ חדש',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: fileNameController,
+                decoration: const InputDecoration(
+                  labelText: 'שם הקובץ',
+                  hintText: 'index.html, style.css, script.js...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: TextField(
+                  controller: fileContentController,
+                  maxLines: null,
+                  expands: true,
+                  decoration: const InputDecoration(
+                    labelText: 'תוכן הקובץ',
+                    hintText: 'הכנס את תוכן הקובץ כאן...',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('ביטול'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => _uploadFile(
+                      fileNameController.text.trim(),
+                      fileContentController.text.trim(),
+                    ),
+                    child: const Text('העלה קובץ'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCreateFolderDialog() {
+    final folderNameController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.create_new_folder, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('צור תיקייה חדשה'),
+          ],
+        ),
+        content: TextField(
+          controller: folderNameController,
+          decoration: const InputDecoration(
+            labelText: 'שם התיקייה',
+            hintText: 'images, css, js...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () => _createFolder(folderNameController.text.trim()),
+            child: const Text('צור תיקייה'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _uploadFile(String fileName, String fileContent) async {
+    if (fileName.isEmpty || fileContent.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('אנא מלא את כל השדות')),
+      );
+      return;
+    }
+
+    Navigator.pop(context); // Close upload dialog
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('מעלה קובץ...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        final result = await apiService.uploadFileToSite(
+          serverId: widget.serverId,
+          siteId: widget.siteId,
+          remotePath: currentPath,
+          fileName: fileName,
+          fileContent: fileContent,
+        );
+        
+        if (mounted) Navigator.pop(context); // Close loading dialog
+        
+        if (result['success'] == true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('קובץ $fileName הועלה בהצלחה')),
+            );
+          }
+          _loadFiles(); // Refresh file list
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('שגיאה בהעלאת קובץ: ${result['error']}')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בהעלאת קובץ: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _createFolder(String folderName) async {
+    if (folderName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('אנא הכנס שם תיקייה')),
+      );
+      return;
+    }
+
+    Navigator.pop(context); // Close create folder dialog
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('יוצר תיקייה...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ploi_api_token');
+      
+      if (token != null) {
+        final apiService = PloiApiService();
+        await apiService.setApiToken(token);
+        
+        final result = await apiService.createDirectoryInSite(
+          serverId: widget.serverId,
+          siteId: widget.siteId,
+          remotePath: currentPath,
+          directoryName: folderName,
+        );
+        
+        if (mounted) Navigator.pop(context); // Close loading dialog
+        
+        if (result['success'] == true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('תיקייה $folderName נוצרה בהצלחה')),
+            );
+          }
+          _loadFiles(); // Refresh file list
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('שגיאה ביצירת תיקייה: ${result['error']}')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה ביצירת תיקייה: $e')),
+        );
+      }
+    }
   }
 }

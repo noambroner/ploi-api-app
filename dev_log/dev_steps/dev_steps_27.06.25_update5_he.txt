@@ -1,0 +1,111 @@
+יומן פיתוח - 27.06.25 - עדכון 5 (עברית)
+=============================================
+
+מטרת הסשן:
+- החזרת פונקציונליות יצירת אתר חדש המלאה
+- תיקון הבעיה שהכפתור הציג רק הודעה זמנית
+- הוספת טופס מלא עם הגדרות מתקדמות
+
+שינויים שבוצעו:
+================
+
+1. החזרת CreateSiteDialog המלא:
+   - הוחלף הדיאלוג הזמני בטופס מלא
+   - הוספת שדות: דומיין, סוג פרויקט, גרסת PHP, תיקיית Web
+   - הוספת הגדרות מתקדמות: Git Repository, Branch, התקנות
+
+2. תכונות הטופס:
+   - Validation על שדה הדומיין
+   - Auto-adjustment של הגדרות לפי סוג הפרויקט
+   - הגדרות מתקדמות מתקפלות
+   - תמיכה ב-5 סוגי פרויקטים: PHP, Laravel, WordPress, Node.js, Static HTML
+
+3. הוספת API Method:
+   - createSite() ב-PloiApiService
+   - חיבור מלא ל-Ploi API
+   - טיפול בשגיאות ואינדיקטור טעינה
+
+4. עדכון גרסה:
+   - גרסה חדשה: 1.3.7+34
+   - עדכון כותרת האפליקציה
+
+תכונות הטופס:
+=============
+
+**שדות בסיסיים:**
+- דומיין האתר (חובה)
+- סוג פרויקט (PHP/Laravel/WordPress/Node.js/Static)
+- גרסת PHP (לפרויקטי PHP)
+- תיקיית Web (עם ברירות מחדל חכמות)
+
+**הגדרות מתקדמות:**
+- Git Repository (אופציונלי)
+- Git Branch (ברירת מחדל: main)
+- התקן Composer (אוטומטי ל-Laravel)
+- התקן NPM (אוטומטי ל-Node.js)
+
+**אוטומציה חכמה:**
+```dart
+// Laravel
+_webDirectory = '/public';
+_installComposer = true;
+
+// WordPress  
+_webDirectory = '/';
+_installComposer = false;
+
+// Node.js
+_webDirectory = '/dist';
+_installNpm = true;
+```
+
+דוגמאות קוד:
+============
+
+הקריאה לטופס:
+```dart
+void _showCreateSiteDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => CreateSiteDialog(
+      serverId: widget.server['id'],
+      onSiteCreated: () {
+        _loadSites(); // Refresh sites list
+      },
+    ),
+  );
+}
+```
+
+API Method חדש:
+```dart
+Future<Map<String, dynamic>> createSite(int serverId, Map<String, dynamic> siteData) async {
+  print('🌐 Creating site on server $serverId with data: $siteData');
+  return await _post('servers/$serverId/sites', siteData);
+}
+```
+
+בעיות שנפתרו:
+=============
+- הכפתור "הוסף אתר חדש" הציג רק הודעה זמנית
+- חסרה פונקציונליות מלאה ליצירת אתר
+- לא היה חיבור ל-Ploi API ליצירת אתר
+- חסרו הגדרות מתקדמות וטיפול בסוגי פרויקטים שונים
+
+התוצאה:
+========
+- טופס מלא ומקצועי ליצירת אתר חדש
+- תמיכה ב-5 סוגי פרויקטים עיקריים
+- הגדרות מתקדמות עם Git ו-Dependencies
+- רענון אוטומטי של רשימת האתרים לאחר יצירה
+- טיפול מלא בשגיאות ואינדיקטורי טעינה
+
+סטטוס: ✅ הושלם
+גרסה: 1.3.7+34
+תאריך: 27.06.25
+
+הערות:
+=======
+- הפונקציונליות הייתה קיימת בגרסה 1.2.9 אבל נמחקה
+- עכשיו הוחזרה במלואה עם שיפורים נוספים
+- מוכן לבדיקה עם Ploi API אמיתי 

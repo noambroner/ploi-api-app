@@ -1,0 +1,72 @@
+Development Log - 27.06.25 - Update 4 (English)
+=================================================
+
+Session Goals:
+- Fix missing "Add New Site" button issue
+- Add new site creation functionality
+- Update version from 1.3.5 to 1.3.6
+
+Changes Made:
+=============
+
+1. Fixed "Add New Site" Button:
+   - Added IconButton with Icons.add icon
+   - Button always appears next to refresh button
+   - Includes Hebrew tooltip: "הוסף אתר חדש"
+
+2. Added Temporary Function:
+   - _showCreateSiteDialog() displays info dialog
+   - Explains feature not yet implemented
+   - Will be added in future updates
+
+3. Version Update:
+   - New version: 1.3.6+33
+   - Updated app title
+
+Code Examples:
+==============
+
+Adding the button:
+```dart
+IconButton(
+  icon: const Icon(Icons.add),
+  onPressed: _showCreateSiteDialog,
+  tooltip: 'הוסף אתר חדש',
+),
+```
+
+New function:
+```dart
+void _showCreateSiteDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('הוסף אתר חדש'),
+      content: const Text('יצירת אתר חדש עדיין לא מיושמת.\\nתכונה זו תתווסף בעדכונים הבאים.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('סגור'),
+        ),
+      ],
+    ),
+  );
+}
+```
+
+Issues Resolved:
+===============
+- "Add New Site" button was disappearing when sites existed
+- Button now always appears
+- Added user feedback for unimplemented feature
+
+Next Steps:
+===========
+- Full implementation of new site creation
+- Add form with required fields
+- Connect to Ploi API for site creation
+- Validation and testing
+
+Status: ✅ Completed
+Version: 1.3.6+33
+Date: 27.06.25 

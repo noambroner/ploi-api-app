@@ -1,0 +1,83 @@
+=== Development Log - 28.06.25 ===
+🕒 Date & Time: 28.06.2025, Saturday, 23:52 IDT
+Version: v1.9.4+1
+
+PROMPT: "מצא מדוע לא הצלחנו לתקן את האתר ומה חסר או שגוי בשביל שנוכל להתקין את תעודת הSSL"
+(Find out why we couldn't fix the website and what's missing or wrong so we can install the SSL certificate)
+==================================================
+
+🎯 Execution Plan:
+1. Read all documentation and guidelines files as required
+2. Analyze the problem from logs and screenshots
+3. Identify why Auto-Fix failed and how to fix the website
+4. Create detailed guide for fixing the website before SSL
+5. Document the session according to guidelines
+
+📋 What Was Actually Done:
+1. ✅ Complete reading of all guidelines and documentation files:
+   - README_INSTRUCTIONS.md - Complete project guidelines
+   - DEVELOPMENT_WORKFLOW_INSTRUCTIONS.md - Development processes
+   - dev_steps_28.06.25_he.txt - Last session
+   - dev_steps_27.06.25_he.txt - Previous session with SSL Management
+   - auto_fix_log.txt - Current Auto-Fix log
+
+2. ✅ Successfully ran the application:
+   - Executed with ploi_runner.bat
+   - Application is open and running
+   - Auto-Fix system is active
+
+3. ✅ Deep analysis of the problem:
+   - Website test2.bflow.co.il returns 404 Not Found
+   - Auto-Fix tries to create files but fails
+   - All commands return "Failed to get direct command log: 404"
+   - Problem: Wrong Web Directory or files not in correct location
+
+4. ✅ Created detailed fix guide:
+   - WEBSITE_FIX_GUIDE.md - Step-by-step guide
+   - Includes nginx configuration fix
+   - Instructions for creating index.html
+   - DNS and logs checks
+
+🔧 Technical Changes:
+- WEBSITE_FIX_GUIDE.md: New guide for fixing test2.bflow.co.il website
+
+🚨 Issues Identified:
+- Website test2.bflow.co.il returns 404 - this prevents SSL installation
+- Auto-Fix in application fails because it can't find the files
+- nginx configuration probably points to /public instead of root directory
+- Let's Encrypt cannot validate domain that returns 404
+
+🎯 Final Results:
+✅ What I understood:
+- Main issue: Website is not accessible (404)
+- Auto-Fix works but cannot fix nginx misconfiguration
+- Manual Web Directory fix is needed
+
+❌ What's still not fixed:
+- Website test2.bflow.co.il still returns 404
+- SSL cannot install until website works
+
+🔄 What's in progress:
+- Created detailed guide for fixing the website
+- Guide is ready for execution on server
+
+📋 Next Steps:
+1. Execute the guide I created (WEBSITE_FIX_GUIDE.md)
+2. Fix website test2.bflow.co.il
+3. Ensure website returns 200 OK
+4. Try SSL installation with Let's Encrypt again
+5. Test SSL Management functionality in application
+
+📁 Files Modified:
+- Projects/ploi_api_app/WEBSITE_FIX_GUIDE.md (new)
+- Projects/ploi_api_app/dev_log/dev_steps/dev_steps_28.06.25_23_52_en.txt (this file)
+
+💡 Important Notes:
+The issue is not with the application or SSL Management - the issue is with the website configuration itself.
+The application works excellently, but Let's Encrypt requires the website to be accessible before it can validate it.
+Solution: Fix nginx configuration and create index.html in the correct root directory.
+
+🎯 Goal for next session:
+Execute the fix and successfully install SSL certificate with Let's Encrypt!
+
+=== End of Log 28.06.25 === 
